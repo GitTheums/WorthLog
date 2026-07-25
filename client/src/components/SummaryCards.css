@@ -1,0 +1,41 @@
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.summary-card {
+  display: grid;
+  gap: var(--space-3);
+  min-height: 118px;
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.summary-card__label {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  font-weight: 550;
+}
+
+.summary-card__value {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.summary-card__value--compact {
+  font-size: 1.2rem;
+}
+
+.summary-card__value--date {
+  font-size: 1.25rem;
+  font-weight: 650;
+}

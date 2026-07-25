@@ -1,0 +1,27 @@
+.dashboard-shell {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.dashboard {
+  width: min(100% - 3rem, var(--content-max));
+  margin: 0 auto;
+  padding: 0 0 var(--space-8);
+}
+
+.dashboard__main {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.dashboard__content {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.dashboard__charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+  gap: var(--space-4);
+  align-items: stretch;
+}

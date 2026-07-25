@@ -1,0 +1,25 @@
+.change-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.change-value--positive {
+  color: var(--positive);
+}
+
+.change-value--negative {
+  color: var(--negative);
+}
+
+.change-value--neutral {
+  color: var(--neutral);
+}
+
+.change-value__percent {
+  font-size: 0.9em;
+  font-weight: 550;
+  opacity: 0.9;
+}
