@@ -1,19 +1,32 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ApiError, deleteSnapshot } from './api/client';
 import type { DashboardRange } from './api/types';
 import { AllocationChart } from './components/AllocationChart';
 import { CategoryCards } from './components/CategoryCards';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { EmptyState } from './components/EmptyState';
 import { ErrorState } from './components/ErrorState';
 import { Header } from './components/Header';
 import { HistoryTable } from './components/HistoryTable';
 import { PlaceholderDialog } from './components/PlaceholderDialog';
 import { DashboardSkeleton } from './components/Skeleton';
+import {
+  SnapshotModal,
+  type SnapshotModalMode,
+} from './components/SnapshotModal';
 import { SummaryCards } from './components/SummaryCards';
+import { Toast, type ToastMessage } from './components/Toast';
 import { TotalValueChart } from './components/TotalValueChart';
 import { useDashboard } from './hooks/useDashboard';
 import { useSettings } from './hooks/useSettings';
 import { useTheme } from './hooks/useTheme';
+import { formatMoney, formatSnapshotDate } from './lib/format';
 import './Dashboard.css';
+
+interface DeleteTarget {
+  date: string;
+  totalValueCents: number;
+}
 
 export function Dashboard() {
   const { theme, toggleTheme } = useTheme();
@@ -23,8 +36,14 @@ export function Dashboard() {
     error: settingsError,
   } = useSettings();
   const [range, setRange] = useState<DashboardRange | null>(null);
-  const [snapshotDialogOpen, setSnapshotDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [snapshotOpen, setSnapshotOpen] = useState(false);
+  const [snapshotMode, setSnapshotMode] = useState<SnapshotModalMode>('add');
+  const [editDate, setEditDate] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (settings && range === null) {
@@ -45,6 +64,61 @@ export function Dashboard() {
   const error = settingsError ?? dashboardError;
   const isEmpty = Boolean(data && data.historyRows.length === 0);
 
+  const openAddSnapshot = (trigger?: HTMLElement) => {
+    restoreFocusRef.current = trigger ?? null;
+    setSnapshotMode('add');
+    setEditDate(null);
+    setSnapshotOpen(true);
+  };
+
+  const openEditSnapshot = (date: string, trigger: HTMLElement) => {
+    restoreFocusRef.current = trigger;
+    setSnapshotMode('edit');
+    setEditDate(date);
+    setSnapshotOpen(true);
+  };
+
+  const openDeleteSnapshot = (
+    date: string,
+    totalValueCents: number,
+    trigger: HTMLElement,
+  ) => {
+    restoreFocusRef.current = trigger;
+    setDeleteTarget({ date, totalValueCents });
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget || deleting) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await deleteSnapshot(deleteTarget.date);
+      setToast({
+        id: crypto.randomUUID(),
+        tone: 'success',
+        message: `Snapshot for ${formatSnapshotDate(deleteTarget.date)} deleted`,
+      });
+      setDeleteTarget(null);
+      reload();
+    } catch (caught) {
+      const message =
+        caught instanceof ApiError
+          ? caught.message
+          : caught instanceof Error
+            ? caught.message
+            : 'Could not delete snapshot';
+      setToast({
+        id: crypto.randomUUID(),
+        tone: 'error',
+        message,
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   let mainContent: ReactNode;
 
   if (showSkeleton) {
@@ -61,7 +135,7 @@ export function Dashboard() {
     mainContent = (
       <EmptyState
         onAddSnapshot={() => {
-          setSnapshotDialogOpen(true);
+          openAddSnapshot();
         }}
       />
     );
@@ -81,7 +155,12 @@ export function Dashboard() {
         </div>
 
         <CategoryCards data={data} currency={currency} />
-        <HistoryTable data={data} currency={currency} />
+        <HistoryTable
+          data={data}
+          currency={currency}
+          onEdit={openEditSnapshot}
+          onDelete={openDeleteSnapshot}
+        />
       </div>
     );
   }
@@ -93,7 +172,10 @@ export function Dashboard() {
           theme={theme}
           onToggleTheme={toggleTheme}
           onAddSnapshot={() => {
-            setSnapshotDialogOpen(true);
+            const active = document.activeElement;
+            openAddSnapshot(
+              active instanceof HTMLElement ? active : undefined,
+            );
           }}
           onOpenSettings={() => {
             setSettingsDialogOpen(true);
@@ -103,12 +185,46 @@ export function Dashboard() {
         <main className="dashboard__main">{mainContent}</main>
       </div>
 
-      <PlaceholderDialog
-        open={snapshotDialogOpen}
-        title="Add snapshot"
-        description="The snapshot editor will be available in a later update. Use this button later to record category totals for a selected date."
+      <SnapshotModal
+        open={snapshotOpen}
+        mode={snapshotMode}
+        editDate={editDate}
+        currency={currency}
+        dashboard={data}
+        restoreFocusTo={restoreFocusRef}
         onClose={() => {
-          setSnapshotDialogOpen(false);
+          setSnapshotOpen(false);
+          setEditDate(null);
+        }}
+        onSaved={(message) => {
+          setToast({
+            id: crypto.randomUUID(),
+            tone: 'success',
+            message,
+          });
+          reload();
+        }}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete snapshot?"
+        description={
+          deleteTarget
+            ? `Delete the snapshot for ${formatSnapshotDate(deleteTarget.date)} with a total of ${formatMoney(deleteTarget.totalValueCents, currency)}? This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete snapshot"
+        tone="danger"
+        busy={deleting}
+        restoreFocusTo={restoreFocusRef}
+        onCancel={() => {
+          if (!deleting) {
+            setDeleteTarget(null);
+          }
+        }}
+        onConfirm={() => {
+          void handleDelete();
         }}
       />
 
@@ -120,6 +236,10 @@ export function Dashboard() {
           setSettingsDialogOpen(false);
         }}
       />
+
+      <Toast toast={toast} onDismiss={() => {
+        setToast(null);
+      }} />
     </div>
   );
 }

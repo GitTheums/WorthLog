@@ -89,3 +89,38 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.history-table__actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.history-table__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    color var(--transition);
+}
+
+.history-table__action:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.history-table__action--danger:hover {
+  border-color: var(--negative);
+  background: var(--negative-soft);
+  color: var(--negative);
+}

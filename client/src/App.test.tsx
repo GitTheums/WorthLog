@@ -2,37 +2,8 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
-import {
-  dashboardFixture,
-  emptyDashboardFixture,
-  settingsFixture,
-} from './test/fixtures';
-
-function requestUrl(input: RequestInfo | URL): string {
-  if (typeof input === 'string') {
-    return input;
-  }
-  if (input instanceof URL) {
-    return input.toString();
-  }
-  return input.url;
-}
-
-function mockApi(dashboard = dashboardFixture) {
-  vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
-    const url = requestUrl(input);
-
-    if (url.includes('/api/settings')) {
-      return Promise.resolve(Response.json({ data: settingsFixture }));
-    }
-
-    if (url.includes('/api/dashboard')) {
-      return Promise.resolve(Response.json({ data: dashboard }));
-    }
-
-    return Promise.resolve(new Response('Not found', { status: 404 }));
-  });
-}
+import { emptyDashboardFixture } from './test/fixtures';
+import { mockApi } from './test/mock-api';
 
 describe('App dashboard', () => {
   beforeEach(() => {
@@ -65,7 +36,7 @@ describe('App dashboard', () => {
   });
 
   it('shows an empty state when there are no snapshots', async () => {
-    mockApi(emptyDashboardFixture);
+    mockApi({ dashboard: emptyDashboardFixture });
 
     render(<App />);
 
@@ -79,9 +50,18 @@ describe('App dashboard', () => {
 
   it('shows an error state when the API fails', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
-      const url = requestUrl(input);
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
       if (url.includes('/api/settings')) {
-        return Promise.resolve(Response.json({ data: settingsFixture }));
+        return Promise.resolve(
+          Response.json({
+            data: { currency: 'EUR', defaultRange: '3m' },
+          }),
+        );
       }
       return Promise.resolve(
         Response.json(
@@ -104,7 +84,7 @@ describe('App dashboard', () => {
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 
-  it('opens placeholder dialogs and toggles theme', async () => {
+  it('opens the snapshot modal and settings placeholder, and toggles theme', async () => {
     mockApi();
     const user = userEvent.setup();
 
@@ -112,9 +92,18 @@ describe('App dashboard', () => {
     await screen.findByRole('heading', { name: 'History' });
 
     await user.click(screen.getByRole('button', { name: 'Add snapshot' }));
-    const snapshotDialog = screen.getByRole('dialog', { name: 'Add snapshot' });
+    const snapshotDialog = await screen.findByRole('dialog', {
+      name: 'Add snapshot',
+    });
     expect(snapshotDialog).toBeInTheDocument();
-    await user.click(within(snapshotDialog).getByRole('button', { name: 'Close' }));
+    expect(
+      await within(snapshotDialog).findByLabelText('Snapshot date'),
+    ).toBeInTheDocument();
+    await user.click(
+      within(snapshotDialog).getByRole('button', {
+        name: 'Close snapshot dialog',
+      }),
+    );
 
     await user.click(screen.getByRole('button', { name: 'Open settings' }));
     expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument();

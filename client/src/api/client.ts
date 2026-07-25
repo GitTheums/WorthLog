@@ -2,8 +2,11 @@ import type {
   ApiErrorBody,
   ApiSuccess,
   AppSettings,
+  Category,
   DashboardData,
   DashboardRange,
+  SnapshotDetails,
+  UpsertSnapshotPayload,
 } from './types';
 
 export class ApiError extends Error {
@@ -60,4 +63,37 @@ export function fetchSettings(): Promise<AppSettings> {
 export function fetchDashboard(range: DashboardRange): Promise<DashboardData> {
   const params = new URLSearchParams({ range });
   return request<DashboardData>(`/api/dashboard?${params.toString()}`);
+}
+
+export function fetchCategories(
+  includeArchived = false,
+): Promise<Category[]> {
+  const params = new URLSearchParams();
+  if (includeArchived) {
+    params.set('includeArchived', 'true');
+  }
+  const query = params.toString();
+  return request<Category[]>(
+    query.length > 0 ? `/api/categories?${query}` : '/api/categories',
+  );
+}
+
+export function fetchSnapshot(date: string): Promise<SnapshotDetails> {
+  return request<SnapshotDetails>(`/api/snapshots/${date}`);
+}
+
+export function putSnapshot(
+  date: string,
+  payload: UpsertSnapshotPayload,
+): Promise<SnapshotDetails> {
+  return request<SnapshotDetails>(`/api/snapshots/${date}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteSnapshot(date: string): Promise<void> {
+  await request<undefined>(`/api/snapshots/${date}`, {
+    method: 'DELETE',
+  });
 }

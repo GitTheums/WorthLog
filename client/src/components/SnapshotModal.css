@@ -1,0 +1,232 @@
+.snapshot-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+}
+
+.snapshot-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: var(--overlay);
+  cursor: pointer;
+}
+
+.snapshot-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(640px, 100%);
+  max-height: min(90vh, 880px);
+  overflow: auto;
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--card-raised);
+  box-shadow: var(--shadow);
+}
+
+.snapshot-modal__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.snapshot-modal__title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.snapshot-modal__subtitle {
+  margin: 0.3rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.snapshot-modal__close,
+.snapshot-modal__button {
+  min-height: 2.5rem;
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-control);
+  font-weight: 600;
+  transition:
+    opacity var(--transition),
+    background var(--transition),
+    border-color var(--transition);
+}
+
+.snapshot-modal__close {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+}
+
+.snapshot-modal__form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.snapshot-modal__field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.snapshot-modal__field label,
+.snapshot-modal__categories legend {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.snapshot-modal__field input,
+.snapshot-modal__field textarea,
+.snapshot-modal__money input {
+  width: 100%;
+  min-height: 2.6rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  color: var(--text);
+}
+
+.snapshot-modal__field textarea {
+  resize: vertical;
+  min-height: 5rem;
+}
+
+.snapshot-modal__field input:focus-visible,
+.snapshot-modal__field textarea:focus-visible,
+.snapshot-modal__money input:focus-visible {
+  border-color: var(--accent);
+}
+
+.snapshot-modal__field input[aria-invalid='true'],
+.snapshot-modal__money input[aria-invalid='true'] {
+  border-color: var(--negative);
+}
+
+.snapshot-modal__categories {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.snapshot-modal__category-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.snapshot-modal__category {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.snapshot-modal__category-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-weight: 600;
+}
+
+.snapshot-modal__category-icon {
+  display: grid;
+  place-items: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 8px;
+}
+
+.snapshot-modal__money {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.snapshot-modal__currency {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.snapshot-modal__field-error,
+.snapshot-modal__error {
+  margin: 0;
+  color: var(--negative);
+  font-size: 0.84rem;
+}
+
+.snapshot-modal__warning {
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 0.86rem;
+}
+
+.snapshot-modal__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.snapshot-modal__total span {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.snapshot-modal__total strong {
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.snapshot-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.snapshot-modal__button--ghost {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+}
+
+.snapshot-modal__button--primary {
+  border: none;
+  background: var(--accent);
+  color: #fff;
+}
+
+.snapshot-modal__button:disabled,
+.snapshot-modal__close:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.snapshot-modal__status {
+  margin: 0;
+  color: var(--text-secondary);
+}

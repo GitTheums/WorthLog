@@ -5,6 +5,44 @@ export interface AppSettings {
   defaultRange: DashboardRange;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  sortOrder: number;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SnapshotValue {
+  id: string;
+  snapshotId: string;
+  categoryId: string;
+  amountCents: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SnapshotDetails {
+  id: string;
+  date: string;
+  note: string | null;
+  totalValueCents: number;
+  values: SnapshotValue[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertSnapshotPayload {
+  note?: string | null;
+  values: Array<{
+    categoryId: string;
+    amountCents: number;
+  }>;
+}
+
 export interface DashboardData {
   range: DashboardRange;
   currentTotalCents: number;

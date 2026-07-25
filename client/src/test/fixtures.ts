@@ -1,8 +1,99 @@
-import type { AppSettings, DashboardData } from '../api/types';
+import type {
+  AppSettings,
+  Category,
+  DashboardData,
+  SnapshotDetails,
+} from '../api/types';
 
 export const settingsFixture: AppSettings = {
   currency: 'EUR',
   defaultRange: '3m',
+};
+
+export const categoriesFixture: Category[] = [
+  {
+    id: 'cat-crypto',
+    name: 'Crypto',
+    color: '#7C5CFC',
+    icon: 'Bitcoin',
+    sortOrder: 0,
+    archivedAt: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'cat-stocks',
+    name: 'Stocks',
+    color: '#2563EB',
+    icon: 'ChartNoAxesCombined',
+    sortOrder: 1,
+    archivedAt: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'cat-pokemon',
+    name: 'Pokémon',
+    color: '#F59E0B',
+    icon: 'Sparkles',
+    sortOrder: 2,
+    archivedAt: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'cat-skins',
+    name: 'CS2 Skins',
+    color: '#EF4444',
+    icon: 'Crosshair',
+    sortOrder: 3,
+    archivedAt: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  },
+];
+
+export const snapshotFixture: SnapshotDetails = {
+  id: 'snap-1',
+  date: '2026-03-01',
+  note: 'Latest',
+  totalValueCents: 12_000,
+  createdAt: '2026-03-01T00:00:00.000Z',
+  updatedAt: '2026-03-01T00:00:00.000Z',
+  values: [
+    {
+      id: 'val-1',
+      snapshotId: 'snap-1',
+      categoryId: 'cat-crypto',
+      amountCents: 3_000,
+      createdAt: '2026-03-01T00:00:00.000Z',
+      updatedAt: '2026-03-01T00:00:00.000Z',
+    },
+    {
+      id: 'val-2',
+      snapshotId: 'snap-1',
+      categoryId: 'cat-stocks',
+      amountCents: 3_000,
+      createdAt: '2026-03-01T00:00:00.000Z',
+      updatedAt: '2026-03-01T00:00:00.000Z',
+    },
+    {
+      id: 'val-3',
+      snapshotId: 'snap-1',
+      categoryId: 'cat-pokemon',
+      amountCents: 3_000,
+      createdAt: '2026-03-01T00:00:00.000Z',
+      updatedAt: '2026-03-01T00:00:00.000Z',
+    },
+    {
+      id: 'val-4',
+      snapshotId: 'snap-1',
+      categoryId: 'cat-skins',
+      amountCents: 3_000,
+      createdAt: '2026-03-01T00:00:00.000Z',
+      updatedAt: '2026-03-01T00:00:00.000Z',
+    },
+  ],
 };
 
 export const emptyDashboardFixture: DashboardData = {

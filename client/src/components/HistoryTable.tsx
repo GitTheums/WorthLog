@@ -1,3 +1,4 @@
+import { Pencil, Trash2 } from 'lucide-react';
 import type { DashboardData } from '../api/types';
 import { formatMoney, formatSnapshotDate } from '../lib/format';
 import './HistoryTable.css';
@@ -5,9 +6,16 @@ import './HistoryTable.css';
 interface HistoryTableProps {
   data: DashboardData;
   currency: string;
+  onEdit: (date: string, trigger: HTMLElement) => void;
+  onDelete: (date: string, totalValueCents: number, trigger: HTMLElement) => void;
 }
 
-export function HistoryTable({ data, currency }: HistoryTableProps) {
+export function HistoryTable({
+  data,
+  currency,
+  onEdit,
+  onDelete,
+}: HistoryTableProps) {
   const categoryNames = new Map(
     data.latestCategoryValues.map((category) => [
       category.categoryId,
@@ -44,6 +52,9 @@ export function HistoryTable({ data, currency }: HistoryTableProps) {
                 </th>
               ))}
               <th scope="col">Note</th>
+              <th scope="col">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -64,6 +75,30 @@ export function HistoryTable({ data, currency }: HistoryTableProps) {
                     </td>
                   ))}
                   <td className="history-table__note">{row.note ?? '—'}</td>
+                  <td className="history-table__actions">
+                    <button
+                      type="button"
+                      className="history-table__action"
+                      aria-label={`Edit snapshot for ${formatSnapshotDate(row.date)}`}
+                      onClick={(event) => {
+                        onEdit(row.date, event.currentTarget);
+                      }}
+                    >
+                      <Pencil size={15} strokeWidth={1.8} aria-hidden="true" />
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="history-table__action history-table__action--danger"
+                      aria-label={`Delete snapshot for ${formatSnapshotDate(row.date)}`}
+                      onClick={(event) => {
+                        onDelete(row.date, row.totalValueCents, event.currentTarget);
+                      }}
+                    >
+                      <Trash2 size={15} strokeWidth={1.8} aria-hidden="true" />
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               );
             })}
