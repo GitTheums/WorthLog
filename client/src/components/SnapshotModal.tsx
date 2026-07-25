@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { Info } from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -36,6 +37,7 @@ interface SnapshotModalProps {
   restoreFocusTo?: RefObject<HTMLElement | null>;
   onClose: () => void;
   onSaved: (message: string) => void;
+  onOpenCategorySettings?: () => void;
 }
 
 type FieldErrors = Record<string, string>;
@@ -85,6 +87,7 @@ export function SnapshotModal({
   restoreFocusTo,
   onClose,
   onSaved,
+  onOpenCategorySettings,
 }: SnapshotModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -381,7 +384,34 @@ export function SnapshotModal({
             </p>
           ) : null}
 
-          {!loading && !loadError ? (
+          {!loading && !loadError && categories.length === 0 ? (
+            <div className="snapshot-modal__empty-categories">
+              <p className="snapshot-modal__empty-categories-text">
+                No active categories yet. Add a category in Settings before
+                creating a snapshot.
+              </p>
+              <div className="snapshot-modal__actions">
+                <button
+                  type="button"
+                  className="snapshot-modal__button snapshot-modal__button--ghost"
+                  onClick={onClose}
+                >
+                  Cancel
+                </button>
+                {onOpenCategorySettings ? (
+                  <button
+                    type="button"
+                    className="snapshot-modal__button snapshot-modal__button--primary"
+                    onClick={onOpenCategorySettings}
+                  >
+                    Open category settings
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {!loading && !loadError && categories.length > 0 ? (
             <form className="snapshot-modal__form" onSubmit={handleSubmit} noValidate>
               <div className="snapshot-modal__field">
                 <label htmlFor={dateId}>Snapshot date</label>
@@ -411,6 +441,22 @@ export function SnapshotModal({
                   </p>
                 ) : null}
               </div>
+
+              {!isEdit &&
+              categories.length === 1 &&
+              !(dashboard?.hasSnapshots ?? false) ? (
+                <div className="snapshot-modal__callout" role="note">
+                  <Info
+                    className="snapshot-modal__callout-icon"
+                    size={16}
+                    aria-hidden="true"
+                  />
+                  <p>
+                    Starting simple? You can add more investment categories later
+                    in Settings.
+                  </p>
+                </div>
+              ) : null}
 
               <fieldset className="snapshot-modal__categories" disabled={saving}>
                 <legend>Category values</legend>

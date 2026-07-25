@@ -5,9 +5,11 @@ import type {
   BackupExport,
   BackupImportResult,
   Category,
+  CategoryDeletionImpact,
   CreateCategoryPayload,
   DashboardData,
   DashboardRange,
+  DeleteCategoryResult,
   SnapshotDetails,
   UpdateCategoryPayload,
   UpsertSnapshotPayload,
@@ -110,8 +112,16 @@ export function updateCategory(
   });
 }
 
-export async function deleteCategory(id: string): Promise<void> {
-  await request<undefined>(`/api/categories/${id}`, {
+export function fetchCategoryDeletionImpact(
+  id: string,
+): Promise<CategoryDeletionImpact> {
+  return request<CategoryDeletionImpact>(
+    `/api/categories/${id}/deletion-impact`,
+  );
+}
+
+export function deleteCategory(id: string): Promise<DeleteCategoryResult> {
+  return request<DeleteCategoryResult>(`/api/categories/${id}`, {
     method: 'DELETE',
   });
 }

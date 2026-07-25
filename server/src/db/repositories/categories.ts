@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import {
-  CategoryInUseError,
   CategoryNotFoundError,
   UniqueConstraintError,
   ValidationError,
@@ -15,6 +14,20 @@ import type {
 
 interface CountRow {
   count: number;
+}
+
+export interface CategoryDeletionImpact {
+  categoryId: string;
+  categoryName: string;
+  valueCount: number;
+  snapshotCount: number;
+}
+
+export interface DeleteCategoryResult {
+  deletedCategoryId: string;
+  deletedCategoryName: string;
+  deletedValueCount: number;
+  affectedSnapshotCount: number;
 }
 
 interface MaxSortRow {
@@ -210,27 +223,79 @@ export function reorderCategories(
   return run(categoryIds);
 }
 
-export function deleteCategory(db: Database.Database, id: string): void {
+export function getCategoryDeletionImpact(
+  db: Database.Database,
+  id: string,
+): CategoryDeletionImpact {
   const existing = getCategoryById(db, id);
   if (!existing) {
     throw new CategoryNotFoundError(id);
   }
 
-  const usage = db
-    .prepare(
-      `
-        SELECT COUNT(*) AS count
-        FROM snapshot_values
-        WHERE category_id = ?
-      `,
-    )
-    .get(id) as CountRow;
+  const valueCount = (
+    db
+      .prepare(
+        `
+          SELECT COUNT(*) AS count
+          FROM snapshot_values
+          WHERE category_id = ?
+        `,
+      )
+      .get(id) as CountRow
+  ).count;
 
-  if (usage.count > 0) {
-    throw new CategoryInUseError(id);
-  }
+  const snapshotCount = (
+    db
+      .prepare(
+        `
+          SELECT COUNT(DISTINCT snapshot_id) AS count
+          FROM snapshot_values
+          WHERE category_id = ?
+        `,
+      )
+      .get(id) as CountRow
+  ).count;
 
-  db.prepare('DELETE FROM categories WHERE id = ?').run(id);
+  return {
+    categoryId: existing.id,
+    categoryName: existing.name,
+    valueCount,
+    snapshotCount,
+  };
+}
+
+/**
+ * Permanently deletes a category and all of its snapshot values in one transaction.
+ * Snapshot rows (dates/notes) are kept; totals recalculate from remaining values.
+ */
+export function deleteCategory(
+  db: Database.Database,
+  id: string,
+): DeleteCategoryResult {
+  const run = db.transaction((categoryId: string): DeleteCategoryResult => {
+    const impact = getCategoryDeletionImpact(db, categoryId);
+
+    db.prepare('DELETE FROM snapshot_values WHERE category_id = ?').run(
+      categoryId,
+    );
+
+    const deleted = db
+      .prepare('DELETE FROM categories WHERE id = ?')
+      .run(categoryId);
+
+    if (deleted.changes === 0) {
+      throw new CategoryNotFoundError(categoryId);
+    }
+
+    return {
+      deletedCategoryId: impact.categoryId,
+      deletedCategoryName: impact.categoryName,
+      deletedValueCount: impact.valueCount,
+      affectedSnapshotCount: impact.snapshotCount,
+    };
+  });
+
+  return run(id);
 }
 
 export function categoryHasSnapshotValues(

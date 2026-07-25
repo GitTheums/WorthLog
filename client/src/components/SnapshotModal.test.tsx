@@ -536,4 +536,108 @@ describe('snapshot workflow', () => {
     expect(within(dialog).getByLabelText('Crypto')).toHaveValue('30.00');
     expect(within(dialog).getByLabelText('Stocks')).toHaveValue('30.00');
   });
+
+  it('shows a first-snapshot helper callout with one category and no history', async () => {
+    mockApi({
+      dashboard: emptyDashboardFixture,
+      snapshotsByDate: {},
+      categories: [
+        {
+          id: 'cat-stocks',
+          name: 'Stocks',
+          color: '#2563EB',
+          icon: 'ChartNoAxesCombined',
+          sortOrder: 0,
+          archivedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    });
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByRole('heading', { name: 'No snapshots yet' });
+
+    const dialog = await openAddModal(user);
+    expect(
+      await within(dialog).findByText(
+        'Starting simple? You can add more investment categories later in Settings.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('hides the helper callout after another category is added', async () => {
+    mockApi({
+      dashboard: emptyDashboardFixture,
+      snapshotsByDate: {},
+      categories: [
+        {
+          id: 'cat-stocks',
+          name: 'Stocks',
+          color: '#2563EB',
+          icon: 'ChartNoAxesCombined',
+          sortOrder: 0,
+          archivedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+        {
+          id: 'cat-bonds',
+          name: 'Bonds',
+          color: '#0F766E',
+          icon: 'Landmark',
+          sortOrder: 1,
+          archivedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    });
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByRole('heading', { name: 'No snapshots yet' });
+
+    const dialog = await openAddModal(user);
+    await within(dialog).findByLabelText('Stocks');
+    expect(
+      within(dialog).queryByText(
+        'Starting simple? You can add more investment categories later in Settings.',
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it('blocks snapshot creation when there are zero active categories', async () => {
+    mockApi({
+      dashboard: emptyDashboardFixture,
+      snapshotsByDate: {},
+      categories: [],
+    });
+    const user = userEvent.setup();
+
+    render(<App />);
+    expect(
+      await screen.findByRole('heading', { name: 'No categories yet' }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Add snapshot' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add snapshot' });
+
+    expect(
+      within(dialog).getByText(
+        'No active categories yet. Add a category in Settings before creating a snapshot.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('button', { name: 'Save snapshot' }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Open category settings' }),
+    );
+    expect(
+      await screen.findByRole('dialog', { name: 'Settings' }),
+    ).toBeInTheDocument();
+  });
 });

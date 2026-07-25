@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ApiError, deleteSnapshot } from './api/client';
+import { ApiError, deleteSnapshot, fetchCategories } from './api/client';
 import type { DashboardRange } from './api/types';
 import { AllocationChart } from './components/AllocationChart';
 import { CategoryCards } from './components/CategoryCards';
@@ -8,7 +8,10 @@ import { EmptyState } from './components/EmptyState';
 import { ErrorState } from './components/ErrorState';
 import { Header } from './components/Header';
 import { HistoryTable } from './components/HistoryTable';
-import { SettingsDialog } from './components/settings/SettingsDialog';
+import {
+  SettingsDialog,
+  type SettingsTab,
+} from './components/settings/SettingsDialog';
 import { DashboardSkeleton } from './components/Skeleton';
 import {
   SnapshotModal,
@@ -39,6 +42,7 @@ export function Dashboard() {
   } = useSettings();
   const [range, setRange] = useState<DashboardRange | null>(null);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('categories');
   const [snapshotOpen, setSnapshotOpen] = useState(false);
   const [snapshotMode, setSnapshotMode] = useState<SnapshotModalMode>('add');
   const [editDate, setEditDate] = useState<string | null>(null);
@@ -46,6 +50,9 @@ export function Dashboard() {
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [categoriesRevision, setCategoriesRevision] = useState(0);
+  const [activeCategoryCount, setActiveCategoryCount] = useState<number | null>(
+    null,
+  );
   const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -66,11 +73,38 @@ export function Dashboard() {
   const fatalError = settingsError ?? (!data ? dashboardError : null);
   const recoverableError = data ? dashboardError : null;
   const isEmptyPortfolio = Boolean(data && !data.hasSnapshots);
+  const hasNoCategories = activeCategoryCount === 0;
+
+  useEffect(() => {
+    let active = true;
+    void fetchCategories(false)
+      .then((categories) => {
+        if (active) {
+          setActiveCategoryCount(categories.length);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setActiveCategoryCount(null);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [categoriesRevision, data]);
 
   const refreshAppData = () => {
     reload();
     reloadSettings();
     setCategoriesRevision((value) => value + 1);
+  };
+
+  const openCategorySettings = (trigger?: HTMLElement | null) => {
+    restoreFocusRef.current = trigger ?? null;
+    setSnapshotOpen(false);
+    setEditDate(null);
+    setSettingsTab('categories');
+    setSettingsDialogOpen(true);
   };
 
   const openAddSnapshot = (trigger?: HTMLElement) => {
@@ -140,11 +174,26 @@ export function Dashboard() {
         onRetry={reload}
       />
     );
+  } else if (hasNoCategories) {
+    mainContent = (
+      <EmptyState
+        variant="no-categories"
+        onAddSnapshot={() => {
+          openAddSnapshot();
+        }}
+        onOpenSettings={() => {
+          openCategorySettings();
+        }}
+      />
+    );
   } else if (!data || isEmptyPortfolio) {
     mainContent = (
       <EmptyState
         onAddSnapshot={() => {
           openAddSnapshot();
+        }}
+        onOpenSettings={() => {
+          openCategorySettings();
         }}
       />
     );
@@ -197,9 +246,9 @@ export function Dashboard() {
           }}
           onOpenSettings={() => {
             const active = document.activeElement;
-            restoreFocusRef.current =
-              active instanceof HTMLElement ? active : null;
-            setSettingsDialogOpen(true);
+            openCategorySettings(
+              active instanceof HTMLElement ? active : null,
+            );
           }}
         />
 
@@ -225,6 +274,9 @@ export function Dashboard() {
             message,
           });
           reload();
+        }}
+        onOpenCategorySettings={() => {
+          openCategorySettings(restoreFocusRef.current);
         }}
       />
 
@@ -254,7 +306,7 @@ export function Dashboard() {
         <SettingsDialog
           open={settingsDialogOpen}
           settings={settings}
-          dashboard={data}
+          initialTab={settingsTab}
           restoreFocusTo={restoreFocusRef}
           onClose={() => {
             setSettingsDialogOpen(false);

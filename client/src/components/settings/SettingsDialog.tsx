@@ -23,6 +23,7 @@ import {
   deleteCategory,
   exportBackup,
   fetchCategories,
+  fetchCategoryDeletionImpact,
   importBackup,
   patchSettings,
   reorderCategories,
@@ -32,7 +33,7 @@ import type {
   AppSettings,
   BackupExport,
   Category,
-  DashboardData,
+  CategoryDeletionImpact,
   DashboardRange,
 } from '../../api/types';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -45,15 +46,16 @@ import {
   CATEGORY_ICON_OPTIONS,
   getCategoryIcon,
 } from '../../lib/icons';
+import { CategoryDeleteDialog } from '../CategoryDeleteDialog';
 import { ConfirmDialog } from '../ConfirmDialog';
 import './SettingsDialog.css';
 
-type SettingsTab = 'categories' | 'general' | 'backup';
+export type SettingsTab = 'categories' | 'general' | 'backup';
 
 interface SettingsDialogProps {
   open: boolean;
   settings: AppSettings;
-  dashboard: DashboardData | null;
+  initialTab?: SettingsTab;
   restoreFocusTo?: RefObject<HTMLElement | null>;
   onClose: () => void;
   onToast: (tone: 'success' | 'error', message: string) => void;
@@ -79,28 +81,10 @@ const RANGE_OPTIONS: Array<{ value: DashboardRange; label: string }> = [
   { value: 'all', label: 'All' },
 ];
 
-function categoryHasHistory(
-  dashboard: DashboardData | null,
-  categoryId: string,
-): boolean {
-  if (!dashboard) {
-    return false;
-  }
-
-  return (
-    dashboard.historyRows.some((row) =>
-      row.values.some((value) => value.categoryId === categoryId),
-    ) ||
-    dashboard.categoryTimeSeries.some(
-      (series) => series.categoryId === categoryId,
-    )
-  );
-}
-
 export function SettingsDialog({
   open,
   settings,
-  dashboard,
+  initialTab = 'categories',
   restoreFocusTo,
   onClose,
   onToast,
@@ -135,12 +119,23 @@ export function SettingsDialog({
   const [pendingImport, setPendingImport] = useState<BackupExport | null>(null);
   const [importConfirmOpen, setImportConfirmOpen] = useState(false);
 
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [deleteImpact, setDeleteImpact] =
+    useState<CategoryDeletionImpact | null>(null);
+  const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
+  const [deletingCategory, setDeletingCategory] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   useFocusTrap({
-    open: open && !importConfirmOpen,
+    open: open && !importConfirmOpen && deleteTarget === null,
     containerRef: panelRef,
     restoreFocusTo,
     onEscape: onClose,
-    escapeEnabled: !savingCategory && !savingGeneral && !backupBusy,
+    escapeEnabled:
+      !savingCategory &&
+      !savingGeneral &&
+      !backupBusy &&
+      !deletingCategory,
   });
 
   const loadCategories = useCallback(async () => {
@@ -162,7 +157,7 @@ export function SettingsDialog({
 
   useEffect(() => {
     if (open && !wasOpenRef.current) {
-      setTab('categories');
+      setTab(initialTab);
       setGeneralError(null);
       setGeneralSuccess(null);
       setBackupError(null);
@@ -172,6 +167,9 @@ export function SettingsDialog({
       setDraft(DEFAULT_DRAFT);
       setDraftErrors({});
       setArchivedOpen(false);
+      setDeleteTarget(null);
+      setDeleteImpact(null);
+      setDeleteError(null);
       void loadCategories();
     }
 
@@ -181,7 +179,13 @@ export function SettingsDialog({
     }
 
     wasOpenRef.current = open;
-  }, [open, settings.currency, settings.defaultRange, loadCategories]);
+  }, [
+    open,
+    initialTab,
+    settings.currency,
+    settings.defaultRange,
+    loadCategories,
+  ]);
 
   const activeCategories = categories.filter(
     (category) => category.archivedAt === null,
@@ -333,34 +337,46 @@ export function SettingsDialog({
     }
   };
 
-  const removeCategory = async (category: Category) => {
-    if (categoryHasHistory(dashboard, category.id)) {
-      onToast(
-        'error',
-        `${category.name} has snapshot history and can only be archived, not permanently deleted.`,
+  const openDeleteDialog = async (category: Category) => {
+    setDeleteTarget(category);
+    setDeleteImpact(null);
+    setDeleteError(null);
+    setDeleteImpactLoading(true);
+    try {
+      const impact = await fetchCategoryDeletionImpact(category.id);
+      setDeleteImpact(impact);
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : 'Could not load deletion details',
       );
+    } finally {
+      setDeleteImpactLoading(false);
+    }
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!deleteTarget || deletingCategory) {
       return;
     }
 
-    setBusyCategoryId(category.id);
+    setDeletingCategory(true);
+    setDeleteError(null);
+    setBusyCategoryId(deleteTarget.id);
     try {
-      await deleteCategory(category.id);
+      const result = await deleteCategory(deleteTarget.id);
+      setDeleteTarget(null);
+      setDeleteImpact(null);
       await loadCategories();
       onDataChanged();
-      onToast('success', `Deleted ${category.name}`);
+      onToast('success', `Deleted ${result.deletedCategoryName}`);
     } catch (error) {
-      if (error instanceof ApiError && error.code === 'CATEGORY_IN_USE') {
-        onToast(
-          'error',
-          `${category.name} has snapshot history and can only be archived, not permanently deleted.`,
-        );
-      } else {
-        onToast(
-          'error',
-          error instanceof Error ? error.message : 'Could not delete category',
-        );
-      }
+      setDeleteError(
+        error instanceof Error ? error.message : 'Could not delete category',
+      );
     } finally {
+      setDeletingCategory(false);
       setBusyCategoryId(null);
     }
   };
@@ -545,9 +561,10 @@ export function SettingsDialog({
             {tab === 'categories' ? (
               <section className="settings-section" aria-label="Categories">
                 <p className="settings-section__intro">
-                  Categories group your investment totals. Snapshot history is kept
-                  when a category is archived. Only unused categories can be
-                  permanently deleted.
+                  Categories group your investment totals. Archive hides a
+                  category from future snapshot forms while preserving its
+                  historical values. Delete permanently removes the category and
+                  its history.
                 </p>
 
                 <div className="settings-toolbar">
@@ -572,9 +589,14 @@ export function SettingsDialog({
                 ) : null}
 
                 <div className="settings-list">
+                  {activeCategories.length === 0 && !loadingCategories ? (
+                    <p className="settings-muted">
+                      No active categories. Add one to start logging snapshots.
+                    </p>
+                  ) : null}
+
                   {activeCategories.map((category, index) => {
                     const Icon = getCategoryIcon(category.icon);
-                    const hasHistory = categoryHasHistory(dashboard, category.id);
                     const busy = busyCategoryId === category.id;
 
                     return (
@@ -593,7 +615,6 @@ export function SettingsDialog({
                           <p className="settings-category__name">{category.name}</p>
                           <p className="settings-category__meta">
                             {category.color} · {category.icon}
-                            {hasHistory ? ' · Has snapshot history' : ''}
                           </p>
                         </div>
                         <div className="settings-category__actions">
@@ -637,6 +658,7 @@ export function SettingsDialog({
                             type="button"
                             className="settings-button settings-button--ghost"
                             aria-label={`Archive ${category.name}`}
+                            title="Hide from future snapshots; keep historical values"
                             disabled={busy}
                             onClick={() => {
                               void setArchived(category, true);
@@ -649,14 +671,10 @@ export function SettingsDialog({
                             type="button"
                             className="settings-button settings-button--danger"
                             aria-label={`Delete ${category.name}`}
+                            title="Permanently remove this category and its history"
                             disabled={busy}
-                            title={
-                              hasHistory
-                                ? 'Categories with snapshot history can only be archived'
-                                : 'Permanently delete this unused category'
-                            }
                             onClick={() => {
-                              void removeCategory(category);
+                              void openDeleteDialog(category);
                             }}
                           >
                             <Trash2 size={15} aria-hidden="true" />
@@ -668,13 +686,11 @@ export function SettingsDialog({
                   })}
                 </div>
 
-                {hasHistoryNotice(activeCategories, dashboard) ? (
-                  <p className="settings-notice">
-                    Categories with snapshot history keep that history when archived.
-                    Permanent delete is only available for categories that were never
-                    used in a snapshot.
-                  </p>
-                ) : null}
+                <p className="settings-notice">
+                  Archive preserves historical values while hiding the category
+                  from future snapshot forms. Delete permanently removes the
+                  category and all of its historical values.
+                </p>
 
                 <div className="settings-archived">
                   <button
@@ -738,6 +754,19 @@ export function SettingsDialog({
                                 >
                                   <ArchiveRestore size={15} aria-hidden="true" />
                                   Restore
+                                </button>
+                                <button
+                                  type="button"
+                                  className="settings-button settings-button--danger"
+                                  aria-label={`Delete ${category.name}`}
+                                  title="Permanently remove this category and its history"
+                                  disabled={busy}
+                                  onClick={() => {
+                                    void openDeleteDialog(category);
+                                  }}
+                                >
+                                  <Trash2 size={15} aria-hidden="true" />
+                                  Delete
                                 </button>
                               </div>
                             </article>
@@ -1015,15 +1044,25 @@ export function SettingsDialog({
           void confirmImport();
         }}
       />
-    </>
-  );
-}
 
-function hasHistoryNotice(
-  activeCategories: Category[],
-  dashboard: DashboardData | null,
-): boolean {
-  return activeCategories.some((category) =>
-    categoryHasHistory(dashboard, category.id),
+      <CategoryDeleteDialog
+        open={deleteTarget !== null}
+        category={deleteTarget}
+        impact={deleteImpact}
+        loadingImpact={deleteImpactLoading}
+        busy={deletingCategory}
+        error={deleteError}
+        onCancel={() => {
+          if (!deletingCategory) {
+            setDeleteTarget(null);
+            setDeleteImpact(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={() => {
+          void confirmDeleteCategory();
+        }}
+      />
+    </>
   );
 }

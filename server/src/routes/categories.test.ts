@@ -1,6 +1,9 @@
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { listCategories } from '../db/repositories/categories.js';
+import {
+  getSnapshotWithValuesByDate,
+  listCategories,
+} from '../db/index.js';
 import {
   createTestContext,
   seedSnapshot,
@@ -130,7 +133,7 @@ describe('categories API', () => {
     expect(restored.body.data.archivedAt).toBeNull();
   });
 
-  it('DELETE /api/categories/:id removes unused categories and conflicts when used', async () => {
+  it('DELETE /api/categories/:id permanently deletes unused and used categories', async () => {
     const created = await request(ctx.app).post('/api/categories').send({
       name: 'Temporary',
       color: '#123456',
@@ -138,19 +141,60 @@ describe('categories API', () => {
     });
     const temporaryId = created.body.data.id as string;
 
-    await request(ctx.app).delete(`/api/categories/${temporaryId}`).expect(204);
+    const unusedDelete = await request(ctx.app).delete(
+      `/api/categories/${temporaryId}`,
+    );
+    expect(unusedDelete.status).toBe(200);
+    expect(unusedDelete.body.data).toMatchObject({
+      deletedCategoryId: temporaryId,
+      deletedCategoryName: 'Temporary',
+      deletedValueCount: 0,
+      affectedSnapshotCount: 0,
+    });
 
     const crypto = listCategories(ctx.db).find((item) => item.name === 'Crypto');
-    if (!crypto) {
-      throw new Error('Expected Crypto category');
+    const stocks = listCategories(ctx.db).find((item) => item.name === 'Stocks');
+    if (!crypto || !stocks) {
+      throw new Error('Expected Crypto and Stocks categories');
     }
 
-    seedSnapshot(ctx.db, '2026-01-01', 1000);
+    seedSnapshot(ctx.db, '2026-01-01', {
+      Crypto: 1000,
+      Stocks: 2000,
+      Pokémon: 3000,
+      'CS2 Skins': 4000,
+    }, 'Keep note');
 
-    const conflict = await request(ctx.app).delete(`/api/categories/${crypto.id}`);
-    expect(conflict.status).toBe(409);
-    expect(conflict.body.error.code).toBe('CATEGORY_IN_USE');
-    expect(conflict.body.error.message).toMatch(/archive/i);
+    const impact = await request(ctx.app).get(
+      `/api/categories/${crypto.id}/deletion-impact`,
+    );
+    expect(impact.status).toBe(200);
+    expect(impact.body.data).toMatchObject({
+      categoryId: crypto.id,
+      categoryName: 'Crypto',
+      valueCount: 1,
+      snapshotCount: 1,
+    });
+
+    const usedDelete = await request(ctx.app).delete(
+      `/api/categories/${crypto.id}`,
+    );
+    expect(usedDelete.status).toBe(200);
+    expect(usedDelete.body.data).toMatchObject({
+      deletedCategoryId: crypto.id,
+      deletedCategoryName: 'Crypto',
+      deletedValueCount: 1,
+      affectedSnapshotCount: 1,
+    });
+
+    const snapshot = getSnapshotWithValuesByDate(ctx.db, '2026-01-01');
+    expect(snapshot?.note).toBe('Keep note');
+    expect(
+      snapshot?.values.some((value) => value.categoryId === crypto.id),
+    ).toBe(false);
+    expect(
+      snapshot?.values.some((value) => value.categoryId === stocks.id),
+    ).toBe(true);
   });
 
   it('POST /api/categories/reorder updates sort orders in one transaction', async () => {
@@ -179,5 +223,27 @@ describe('categories API', () => {
 
     expect(response.status).toBe(404);
     expect(response.body.error.code).toBe('CATEGORY_NOT_FOUND');
+  });
+});
+
+describe('categories API seed defaults', () => {
+  let ctx: TestContext;
+
+  afterEach(() => {
+    ctx.cleanup();
+  });
+
+  it('seeds only Stocks on a fresh empty database', async () => {
+    ctx = createTestContext({ multiCategory: false });
+
+    const response = await request(ctx.app).get('/api/categories');
+    expect(response.status).toBe(200);
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0]).toMatchObject({
+      name: 'Stocks',
+      color: '#2563EB',
+      icon: 'ChartNoAxesCombined',
+      sortOrder: 0,
+    });
   });
 });

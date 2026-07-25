@@ -33,12 +33,31 @@ function readJsonBody(body: BodyInit | null | undefined): unknown {
   return JSON.parse(body) as unknown;
 }
 
-function categoryIdFromUrl(url: string): string | null {
-  const match = /\/api\/categories\/([^/?]+)/.exec(url);
+function categoryRouteFromUrl(
+  url: string,
+): { id: string; deletionImpact: boolean } | null {
+  const impactMatch = /\/api\/categories\/([^/?]+)\/deletion-impact(?:\?|$)/.exec(
+    url,
+  );
+  if (impactMatch?.[1]) {
+    return {
+      id: decodeURIComponent(impactMatch[1]),
+      deletionImpact: true,
+    };
+  }
+
+  const match = /\/api\/categories\/([^/?]+)(?:\?|$)/.exec(url);
   if (!match?.[1] || match[1] === 'reorder') {
     return null;
   }
-  return decodeURIComponent(match[1]);
+  // Ignore list endpoint /api/categories
+  if (url.includes('/api/categories?') || url.endsWith('/api/categories')) {
+    return null;
+  }
+  return {
+    id: decodeURIComponent(match[1]),
+    deletionImpact: false,
+  };
 }
 
 export const backupFixture: BackupExport = {
@@ -86,6 +105,8 @@ interface MockApiOptions {
   onExportBackup?: () => void;
   onImportBackup?: (body: BackupExport) => void;
   deleteCategoryError?: { status: number; code: string; message: string };
+  /** Resolves before a successful DELETE /api/categories/:id response. */
+  awaitBeforeDelete?: () => Promise<void>;
 }
 
 export function mockApi(options: MockApiOptions = {}) {
@@ -163,8 +184,49 @@ export function mockApi(options: MockApiOptions = {}) {
       return Promise.resolve(Response.json({ data: categories }));
     }
 
-    const categoryId = categoryIdFromUrl(url);
-    if (categoryId) {
+    const categoryRoute = categoryRouteFromUrl(url);
+    if (categoryRoute) {
+      const categoryId = categoryRoute.id;
+
+      if (categoryRoute.deletionImpact && method === 'GET') {
+        const category = categories.find((item) => item.id === categoryId);
+        if (!category) {
+          return Promise.resolve(
+            Response.json(
+              {
+                error: {
+                  code: 'CATEGORY_NOT_FOUND',
+                  message: 'Category not found',
+                },
+              },
+              { status: 404 },
+            ),
+          );
+        }
+
+        let valueCount = 0;
+        const snapshotIds = new Set<string>();
+        for (const snapshot of Object.values(snapshotsByDate)) {
+          for (const value of snapshot.values) {
+            if (value.categoryId === categoryId) {
+              valueCount += 1;
+              snapshotIds.add(snapshot.id);
+            }
+          }
+        }
+
+        return Promise.resolve(
+          Response.json({
+            data: {
+              categoryId,
+              categoryName: category.name,
+              valueCount,
+              snapshotCount: snapshotIds.size,
+            },
+          }),
+        );
+      }
+
       if (method === 'PATCH') {
         const body = readJsonBody(init?.body) as UpdateCategoryPayload;
         options.onUpdateCategory?.(categoryId, body);
@@ -204,10 +266,13 @@ export function mockApi(options: MockApiOptions = {}) {
       }
 
       if (method === 'DELETE') {
-        options.onDeleteCategory?.(categoryId);
-        if (options.deleteCategoryError) {
-          return Promise.resolve(
-            Response.json(
+        return (async () => {
+          if (options.awaitBeforeDelete) {
+            await options.awaitBeforeDelete();
+          }
+          options.onDeleteCategory?.(categoryId);
+          if (options.deleteCategoryError) {
+            return Response.json(
               {
                 error: {
                   code: options.deleteCategoryError.code,
@@ -215,11 +280,38 @@ export function mockApi(options: MockApiOptions = {}) {
                 },
               },
               { status: options.deleteCategoryError.status },
-            ),
-          );
-        }
-        categories = categories.filter((item) => item.id !== categoryId);
-        return Promise.resolve(new Response(null, { status: 204 }));
+            );
+          }
+          const category = categories.find((item) => item.id === categoryId);
+          let deletedValueCount = 0;
+          const affectedSnapshots = new Set<string>();
+          for (const snapshot of Object.values(snapshotsByDate)) {
+            const before = snapshot.values.length;
+            snapshot.values = snapshot.values.filter((value) => {
+              if (value.categoryId === categoryId) {
+                deletedValueCount += 1;
+                affectedSnapshots.add(snapshot.id);
+                return false;
+              }
+              return true;
+            });
+            if (snapshot.values.length !== before) {
+              snapshot.totalValueCents = snapshot.values.reduce(
+                (sum, value) => sum + value.amountCents,
+                0,
+              );
+            }
+          }
+          categories = categories.filter((item) => item.id !== categoryId);
+          return Response.json({
+            data: {
+              deletedCategoryId: categoryId,
+              deletedCategoryName: category?.name ?? categoryId,
+              deletedValueCount,
+              affectedSnapshotCount: affectedSnapshots.size,
+            },
+          });
+        })();
       }
     }
 

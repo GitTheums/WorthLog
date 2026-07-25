@@ -8,16 +8,6 @@ export class DatabaseError extends Error {
   }
 }
 
-export class CategoryInUseError extends DatabaseError {
-  constructor(categoryId: string) {
-    super(
-      'CATEGORY_IN_USE',
-      `Category ${categoryId} has snapshot history and cannot be permanently deleted. Archive it instead.`,
-    );
-    this.name = 'CategoryInUseError';
-  }
-}
-
 export class CategoryNotFoundError extends DatabaseError {
   constructor(categoryId: string) {
     super('CATEGORY_NOT_FOUND', `Category ${categoryId} was not found`);

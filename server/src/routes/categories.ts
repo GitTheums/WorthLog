@@ -4,6 +4,7 @@ import type { UpdateCategoryInput } from '../db/types.js';
 import {
   createCategory,
   deleteCategory,
+  getCategoryDeletionImpact,
   listCategories,
   reorderCategories,
   updateCategory,
@@ -65,6 +66,14 @@ export function createCategoriesRouter(db: Database.Database): Router {
     }),
   );
 
+  router.get(
+    '/:id/deletion-impact',
+    asyncHandler((req, res) => {
+      const impact = getCategoryDeletionImpact(db, String(req.params['id']));
+      sendData(res, impact);
+    }),
+  );
+
   router.post(
     '/',
     asyncHandler((req, res) => {
@@ -90,8 +99,8 @@ export function createCategoriesRouter(db: Database.Database): Router {
   router.delete(
     '/:id',
     asyncHandler((req, res) => {
-      deleteCategory(db, String(req.params['id']));
-      res.status(204).send();
+      const result = deleteCategory(db, String(req.params['id']));
+      sendData(res, result);
     }),
   );
 

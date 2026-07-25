@@ -4,13 +4,13 @@ import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
-  CategoryInUseError,
   UniqueConstraintError,
   archiveCategory,
   createCategory,
   deleteCategory,
   getDatabasePath,
   getSetting,
+  getSnapshotDetailsByDate,
   getSnapshotWithValuesByDate,
   listCategories,
   listSnapshotValues,
@@ -18,6 +18,7 @@ import {
   setSetting,
   upsertSnapshot,
 } from './index.js';
+import { getDashboard } from '../services/dashboard.js';
 
 describe('SQLite database layer', () => {
   let dataDir: string;
@@ -59,48 +60,83 @@ describe('SQLite database layer', () => {
     );
   });
 
-  it('seeds default categories only when the categories table is empty', () => {
+  it('seeds only Stocks when the categories table is empty', () => {
     const seeded = listCategories(db);
 
-    expect(seeded).toHaveLength(4);
-    expect(new Set(seeded.map((category) => category.name))).toEqual(
-      new Set(['Crypto', 'Stocks', 'Pokémon', 'CS2 Skins']),
-    );
-    expect(seeded.find((category) => category.name === 'Crypto')).toMatchObject({
-      color: '#7C5CFC',
-      icon: 'Bitcoin',
-      archivedAt: null,
-    });
-    expect(seeded.find((category) => category.name === 'Stocks')).toMatchObject({
+    expect(seeded).toHaveLength(1);
+    expect(seeded[0]).toMatchObject({
+      name: 'Stocks',
       color: '#2563EB',
       icon: 'ChartNoAxesCombined',
+      sortOrder: 0,
+      archivedAt: null,
     });
-    expect(seeded.find((category) => category.name === 'Pokémon')).toMatchObject({
-      color: '#F59E0B',
-      icon: 'Sparkles',
-    });
-    expect(seeded.find((category) => category.name === 'CS2 Skins')).toMatchObject(
-      {
-        color: '#EF4444',
-        icon: 'Crosshair',
-      },
-    );
+  });
+
+  it('does not duplicate Stocks when the database is reopened', () => {
+    expect(listCategories(db)).toHaveLength(1);
 
     db.close();
     db = openDatabase(dataDir);
 
-    expect(listCategories(db)).toHaveLength(4);
+    const categories = listCategories(db);
+    expect(categories).toHaveLength(1);
+    expect(categories[0]?.name).toBe('Stocks');
+  });
+
+  it('leaves an existing four-category installation unchanged on reopen', () => {
+    createCategory(db, {
+      name: 'Crypto',
+      color: '#7C5CFC',
+      icon: 'Bitcoin',
+    });
+    createCategory(db, {
+      name: 'Pokémon',
+      color: '#F59E0B',
+      icon: 'Sparkles',
+    });
+    createCategory(db, {
+      name: 'CS2 Skins',
+      color: '#EF4444',
+      icon: 'Crosshair',
+    });
+
+    const before = listCategories(db, { includeArchived: true }).map(
+      (category) => ({
+        id: category.id,
+        name: category.name,
+        color: category.color,
+        icon: category.icon,
+        sortOrder: category.sortOrder,
+      }),
+    );
+    expect(before).toHaveLength(4);
+
+    db.close();
+    db = openDatabase(dataDir);
+
+    const after = listCategories(db, { includeArchived: true }).map(
+      (category) => ({
+        id: category.id,
+        name: category.name,
+        color: category.color,
+        icon: category.icon,
+        sortOrder: category.sortOrder,
+      }),
+    );
+
+    expect(after).toEqual(before);
   });
 
   it('enforces one snapshot per date', () => {
-    const [crypto] = listCategories(db);
-    if (!crypto) {
+    const [stocks] = listCategories(db);
+    if (!stocks) {
       throw new Error('Expected seeded categories');
     }
 
     upsertSnapshot(db, {
       date: '2026-01-15',
-      values: [{ categoryId: crypto.id, amountCents: 100 }],
+      values: [{ categoryId: stocks.id, amountCents: 100 }],
     });
 
     expect(() => {
@@ -121,28 +157,33 @@ describe('SQLite database layer', () => {
   it('enforces case-insensitive unique category names', () => {
     expect(() =>
       createCategory(db, {
-        name: 'crypto',
+        name: 'stocks',
         color: '#000000',
-        icon: 'Bitcoin',
+        icon: 'ChartNoAxesCombined',
       }),
     ).toThrow(UniqueConstraintError);
 
     expect(() =>
       createCategory(db, {
-        name: 'CRYPTO',
+        name: 'STOCKS',
         color: '#000000',
-        icon: 'Bitcoin',
+        icon: 'ChartNoAxesCombined',
       }),
     ).toThrow(UniqueConstraintError);
   });
 
   it('upserts a complete snapshot inside one transaction', () => {
-    const categories = listCategories(db);
-    const crypto = categories.find((category) => category.name === 'Crypto');
-    const stocks = categories.find((category) => category.name === 'Stocks');
+    const stocks = listCategories(db).find(
+      (category) => category.name === 'Stocks',
+    );
+    const crypto = createCategory(db, {
+      name: 'Crypto',
+      color: '#7C5CFC',
+      icon: 'Bitcoin',
+    });
 
-    if (!crypto || !stocks) {
-      throw new Error('Expected seeded Crypto and Stocks categories');
+    if (!stocks) {
+      throw new Error('Expected seeded Stocks category');
     }
 
     const created = upsertSnapshot(db, {
@@ -183,48 +224,54 @@ describe('SQLite database layer', () => {
   });
 
   it('keeps historical values when a category is archived', () => {
-    const crypto = listCategories(db).find(
-      (category) => category.name === 'Crypto',
+    const stocks = listCategories(db).find(
+      (category) => category.name === 'Stocks',
     );
-    if (!crypto) {
-      throw new Error('Expected seeded Crypto category');
+    if (!stocks) {
+      throw new Error('Expected seeded Stocks category');
     }
 
     upsertSnapshot(db, {
       date: '2026-03-01',
-      values: [{ categoryId: crypto.id, amountCents: 50_000 }],
+      values: [{ categoryId: stocks.id, amountCents: 50_000 }],
     });
 
-    const archived = archiveCategory(db, crypto.id);
+    const archived = archiveCategory(db, stocks.id);
 
     expect(archived.archivedAt).toBeTruthy();
-    expect(listCategories(db).some((category) => category.id === crypto.id)).toBe(
+    expect(listCategories(db).some((category) => category.id === stocks.id)).toBe(
       false,
     );
     expect(
       listCategories(db, { includeArchived: true }).some(
-        (category) => category.id === crypto.id,
+        (category) => category.id === stocks.id,
       ),
     ).toBe(true);
 
     const snapshot = getSnapshotWithValuesByDate(db, '2026-03-01');
     expect(snapshot?.values).toEqual([
       expect.objectContaining({
-        categoryId: crypto.id,
+        categoryId: stocks.id,
         amountCents: 50_000,
       }),
     ]);
   });
 
-  it('allows hard-deleting a category without history', () => {
+  it('allows hard-deleting an unused category', () => {
     const category = createCategory(db, {
       name: 'Temporary',
       color: '#111111',
       icon: 'Sparkles',
     });
 
-    deleteCategory(db, category.id);
+    const result = deleteCategory(db, category.id);
 
+    expect(result).toMatchObject({
+      deletedCategoryId: category.id,
+      deletedCategoryName: 'Temporary',
+      deletedValueCount: 0,
+      affectedSnapshotCount: 0,
+    });
     expect(
       listCategories(db, { includeArchived: true }).some(
         (item) => item.id === category.id,
@@ -232,43 +279,165 @@ describe('SQLite database layer', () => {
     ).toBe(false);
   });
 
-  it('rejects hard-deleting a category that has snapshot data', () => {
-    const crypto = listCategories(db).find(
-      (category) => category.name === 'Crypto',
+  it('allows hard-deleting the initial Stocks category', () => {
+    const stocks = listCategories(db).find(
+      (category) => category.name === 'Stocks',
     );
-    if (!crypto) {
-      throw new Error('Expected seeded Crypto category');
+    if (!stocks) {
+      throw new Error('Expected seeded Stocks category');
+    }
+
+    deleteCategory(db, stocks.id);
+
+    expect(listCategories(db, { includeArchived: true })).toHaveLength(0);
+  });
+
+  it('permanently deletes a category with history and recalculates totals', () => {
+    const stocks = listCategories(db).find(
+      (category) => category.name === 'Stocks',
+    );
+    const crypto = createCategory(db, {
+      name: 'Crypto',
+      color: '#7C5CFC',
+      icon: 'Bitcoin',
+    });
+    if (!stocks) {
+      throw new Error('Expected seeded Stocks category');
     }
 
     upsertSnapshot(db, {
       date: '2026-04-01',
-      values: [{ categoryId: crypto.id, amountCents: 1 }],
+      note: 'Keep me',
+      values: [
+        { categoryId: stocks.id, amountCents: 1_000 },
+        { categoryId: crypto.id, amountCents: 2_000 },
+      ],
+    });
+    upsertSnapshot(db, {
+      date: '2026-04-02',
+      note: 'Also keep',
+      values: [
+        { categoryId: stocks.id, amountCents: 3_000 },
+        { categoryId: crypto.id, amountCents: 4_000 },
+      ],
     });
 
-    expect(() => {
-      deleteCategory(db, crypto.id);
-    }).toThrow(CategoryInUseError);
+    const result = deleteCategory(db, crypto.id);
+
+    expect(result).toMatchObject({
+      deletedCategoryId: crypto.id,
+      deletedCategoryName: 'Crypto',
+      deletedValueCount: 2,
+      affectedSnapshotCount: 2,
+    });
 
     expect(
       listCategories(db, { includeArchived: true }).some(
         (category) => category.id === crypto.id,
       ),
-    ).toBe(true);
+    ).toBe(false);
+
+    const first = getSnapshotDetailsByDate(db, '2026-04-01');
+    expect(first?.note).toBe('Keep me');
+    expect(first?.values).toEqual([
+      expect.objectContaining({
+        categoryId: stocks.id,
+        amountCents: 1_000,
+      }),
+    ]);
+    expect(first?.totalValueCents).toBe(1_000);
+
+    const second = getSnapshotDetailsByDate(db, '2026-04-02');
+    expect(second?.note).toBe('Also keep');
+    expect(second?.totalValueCents).toBe(3_000);
+
+    const orphaned = db
+      .prepare(
+        `
+          SELECT COUNT(*) AS count
+          FROM snapshot_values
+          WHERE category_id = ?
+        `,
+      )
+      .get(crypto.id) as { count: number };
+    expect(orphaned.count).toBe(0);
+
+    const dashboard = getDashboard(db, 'all');
+    expect(dashboard.currentTotalCents).toBe(3_000);
+    expect(dashboard.historyRows).toHaveLength(2);
+  });
+
+  it('keeps a snapshot with total zero when it has no remaining values', () => {
+    const stocks = listCategories(db).find(
+      (category) => category.name === 'Stocks',
+    );
+    if (!stocks) {
+      throw new Error('Expected seeded Stocks category');
+    }
+
+    upsertSnapshot(db, {
+      date: '2026-04-10',
+      note: 'Empty after delete',
+      values: [{ categoryId: stocks.id, amountCents: 500 }],
+    });
+
+    deleteCategory(db, stocks.id);
+
+    const snapshot = getSnapshotDetailsByDate(db, '2026-04-10');
+    expect(snapshot).toMatchObject({
+      date: '2026-04-10',
+      note: 'Empty after delete',
+      totalValueCents: 0,
+      values: [],
+    });
+  });
+
+  it('rolls back a failed deletion transaction completely', () => {
+    const stocks = listCategories(db).find(
+      (category) => category.name === 'Stocks',
+    );
+    if (!stocks) {
+      throw new Error('Expected seeded Stocks category');
+    }
+
+    upsertSnapshot(db, {
+      date: '2026-04-15',
+      values: [{ categoryId: stocks.id, amountCents: 750 }],
+    });
+
+    expect(() => {
+      db.transaction(() => {
+        db.prepare('DELETE FROM snapshot_values WHERE category_id = ?').run(
+          stocks.id,
+        );
+        throw new Error('simulated failure');
+      })();
+    }).toThrow('simulated failure');
+
+    expect(getCategoryByIdSafe(db, stocks.id)).toBeTruthy();
+    expect(
+      getSnapshotWithValuesByDate(db, '2026-04-15')?.values,
+    ).toEqual([
+      expect.objectContaining({
+        categoryId: stocks.id,
+        amountCents: 750,
+      }),
+    ]);
   });
 
   it('keeps money values as exact integer cents', () => {
-    const crypto = listCategories(db).find(
-      (category) => category.name === 'Crypto',
+    const stocks = listCategories(db).find(
+      (category) => category.name === 'Stocks',
     );
-    if (!crypto) {
-      throw new Error('Expected seeded Crypto category');
+    if (!stocks) {
+      throw new Error('Expected seeded Stocks category');
     }
 
     const amountCents = 123_456_789;
 
     const snapshot = upsertSnapshot(db, {
       date: '2026-05-01',
-      values: [{ categoryId: crypto.id, amountCents }],
+      values: [{ categoryId: stocks.id, amountCents }],
     });
 
     expect(snapshot.values[0]?.amountCents).toBe(amountCents);
@@ -293,7 +462,7 @@ describe('SQLite database layer', () => {
     expect(() =>
       upsertSnapshot(db, {
         date: '2026-05-02',
-        values: [{ categoryId: crypto.id, amountCents: 12.34 }],
+        values: [{ categoryId: stocks.id, amountCents: 12.34 }],
       }),
     ).toThrow(/non-negative safe integer/i);
   });
@@ -310,3 +479,12 @@ describe('SQLite database layer', () => {
     expect(getSetting(db, 'currency')?.value).toBe('EUR');
   });
 });
+
+function getCategoryByIdSafe(
+  db: Database.Database,
+  id: string,
+): { id: string } | undefined {
+  return db
+    .prepare('SELECT id FROM categories WHERE id = ?')
+    .get(id) as { id: string } | undefined;
+}

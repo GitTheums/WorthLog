@@ -157,13 +157,31 @@ describe('settings dialog', () => {
     await user.click(
       within(dialog).getByRole('button', { name: 'Delete Unused' }),
     );
+
+    const confirm = await screen.findByRole('alertdialog', {
+      name: 'Delete Unused?',
+    });
+    expect(
+      within(confirm).getByText(/has no snapshot history/i),
+    ).toBeInTheDocument();
+    await user.click(
+      within(confirm).getByRole('button', { name: 'Delete category' }),
+    );
+
     await waitFor(() => {
       expect(deleted).toEqual(['cat-unused']);
     });
+    expect(await screen.findByText('Deleted Unused')).toBeInTheDocument();
   });
 
-  it('blocks permanent delete for categories with snapshot history', async () => {
-    mockApi({ dashboard: dashboardFixture });
+  it('requires typing the category name before deleting one with history', async () => {
+    const deleted: string[] = [];
+    mockApi({
+      dashboard: dashboardFixture,
+      onDeleteCategory: (id) => {
+        deleted.push(id);
+      },
+    });
     const user = userEvent.setup();
 
     render(<App />);
@@ -171,11 +189,8 @@ describe('settings dialog', () => {
 
     const dialog = await openSettings(user);
     expect(
-      within(dialog).getAllByText(/Has snapshot history/).length,
-    ).toBeGreaterThan(0);
-    expect(
       within(dialog).getByText(
-        /Permanent delete is only available for categories that were never used/,
+        /Archive preserves historical values while hiding the category/i,
       ),
     ).toBeInTheDocument();
 
@@ -183,11 +198,94 @@ describe('settings dialog', () => {
       within(dialog).getByRole('button', { name: 'Delete Crypto' }),
     );
 
+    const confirm = await screen.findByRole('alertdialog', {
+      name: 'Delete Crypto?',
+    });
     expect(
-      await screen.findByText(
-        /Crypto has snapshot history and can only be archived/,
+      within(confirm).getByText(
+        /Deleting this category permanently removes all of its historical values/,
       ),
     ).toBeInTheDocument();
+
+    const deleteButton = within(confirm).getByRole('button', {
+      name: 'Delete category',
+    });
+    expect(deleteButton).toBeDisabled();
+
+    await user.type(
+      within(confirm).getByLabelText(/Type Crypto to confirm/i),
+      'Wrong',
+    );
+    expect(deleteButton).toBeDisabled();
+
+    await user.clear(
+      within(confirm).getByLabelText(/Type Crypto to confirm/i),
+    );
+    await user.type(
+      within(confirm).getByLabelText(/Type Crypto to confirm/i),
+      'Crypto',
+    );
+    expect(deleteButton).toBeEnabled();
+
+    await user.click(deleteButton);
+    await waitFor(() => {
+      expect(deleted).toEqual(['cat-crypto']);
+    });
+    expect(await screen.findByText('Deleted Crypto')).toBeInTheDocument();
+  });
+
+  it('prevents duplicate deletion submissions while a delete is in progress', async () => {
+    let releaseDelete: (() => void) | undefined;
+    const deleted: string[] = [];
+
+    const unusedBase = categoriesFixture[0];
+    if (!unusedBase) {
+      throw new Error('Expected category fixtures');
+    }
+
+    mockApi({
+      dashboard: emptyDashboardFixture,
+      categories: [
+        {
+          ...unusedBase,
+          id: 'cat-unused',
+          name: 'Unused',
+          sortOrder: 0,
+        },
+      ],
+      awaitBeforeDelete: () =>
+        new Promise<void>((resolve) => {
+          releaseDelete = resolve;
+        }),
+      onDeleteCategory: (id) => {
+        deleted.push(id);
+      },
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole('heading', { name: 'No snapshots yet' });
+
+    const dialog = await openSettings(user);
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Delete Unused' }),
+    );
+    const confirm = await screen.findByRole('alertdialog', {
+      name: 'Delete Unused?',
+    });
+
+    await user.click(
+      within(confirm).getByRole('button', { name: 'Delete category' }),
+    );
+    expect(
+      within(confirm).getByRole('button', { name: 'Deleting…' }),
+    ).toBeDisabled();
+    expect(deleted).toHaveLength(0);
+
+    releaseDelete?.();
+    await waitFor(() => {
+      expect(deleted).toEqual(['cat-unused']);
+    });
   });
 
   it('saves general settings and explains the no-login local network model', async () => {

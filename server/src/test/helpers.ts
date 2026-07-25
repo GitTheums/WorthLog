@@ -5,7 +5,11 @@ import type Database from 'better-sqlite3';
 import type { Express } from 'express';
 import { createApp } from '../app.js';
 import { openDatabase } from '../db/index.js';
-import { listCategories } from '../db/repositories/categories.js';
+import {
+  createCategory,
+  listCategories,
+  reorderCategories,
+} from '../db/repositories/categories.js';
 import { upsertSnapshot } from '../db/repositories/snapshots.js';
 
 export interface TestContext {
@@ -15,9 +19,48 @@ export interface TestContext {
   cleanup: () => void;
 }
 
-export function createTestContext(): TestContext {
+/**
+ * Adds the classic multi-category set used by older tests.
+ * Does not remove or rename existing categories (safe for Stocks-only seeds).
+ */
+export function ensureMultiCategoryFixture(db: Database.Database): void {
+  const existing = new Set(
+    listCategories(db, { includeArchived: true }).map(
+      (category) => category.name,
+    ),
+  );
+
+  const extras = [
+    { name: 'Crypto', color: '#7C5CFC', icon: 'Bitcoin' },
+    { name: 'Pokémon', color: '#F59E0B', icon: 'Sparkles' },
+    { name: 'CS2 Skins', color: '#EF4444', icon: 'Crosshair' },
+  ] as const;
+
+  for (const category of extras) {
+    if (!existing.has(category.name)) {
+      createCategory(db, category);
+    }
+  }
+
+  const all = listCategories(db, { includeArchived: true });
+  const orderedIds = ['Crypto', 'Stocks', 'Pokémon', 'CS2 Skins']
+    .map((name) => all.find((category) => category.name === name)?.id)
+    .filter((id): id is string => Boolean(id));
+
+  if (orderedIds.length === 4) {
+    reorderCategories(db, orderedIds);
+  }
+}
+
+export function createTestContext(options?: {
+  multiCategory?: boolean;
+}): TestContext {
   const dataDir = mkdtempSync(join(tmpdir(), 'worthlog-api-'));
   const db = openDatabase(dataDir);
+  if (options?.multiCategory !== false) {
+    // Most API/dashboard tests still use the classic four-category fixture.
+    ensureMultiCategoryFixture(db);
+  }
   const app = createApp(db, { dataDir });
 
   return {

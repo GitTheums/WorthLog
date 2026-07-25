@@ -1,7 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import {
-  CategoryInUseError,
   CategoryNotFoundError,
   DatabaseError,
   SnapshotNotFoundError,
@@ -60,11 +59,6 @@ export function errorHandler(
 
   if (error instanceof ZodError) {
     sendError(res, 400, 'VALIDATION_ERROR', 'Request validation failed', zodDetails(error));
-    return;
-  }
-
-  if (error instanceof CategoryInUseError) {
-    sendError(res, 409, error.code, error.message);
     return;
   }
 

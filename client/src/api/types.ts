@@ -30,6 +30,20 @@ export interface UpdateCategoryPayload {
   archived?: boolean;
 }
 
+export interface CategoryDeletionImpact {
+  categoryId: string;
+  categoryName: string;
+  valueCount: number;
+  snapshotCount: number;
+}
+
+export interface DeleteCategoryResult {
+  deletedCategoryId: string;
+  deletedCategoryName: string;
+  deletedValueCount: number;
+  affectedSnapshotCount: number;
+}
+
 export interface SnapshotValue {
   id: string;
   snapshotId: string;

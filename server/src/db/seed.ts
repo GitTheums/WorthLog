@@ -5,13 +5,18 @@ interface CountRow {
   count: number;
 }
 
+/** Seeded only when the categories table is empty (brand-new installations). */
 const DEFAULT_CATEGORIES = [
-  { name: 'Crypto', color: '#7C5CFC', icon: 'Bitcoin' },
-  { name: 'Stocks', color: '#2563EB', icon: 'ChartNoAxesCombined' },
-  { name: 'Pokémon', color: '#F59E0B', icon: 'Sparkles' },
-  { name: 'CS2 Skins', color: '#EF4444', icon: 'Crosshair' },
+  {
+    name: 'Stocks',
+    color: '#2563EB',
+    icon: 'ChartNoAxesCombined',
+  },
 ] as const;
 
+/**
+ * Idempotent first-run seed. Existing installations with any categories are left untouched.
+ */
 export function seedDefaultCategories(db: Database.Database): void {
   const row = db
     .prepare('SELECT COUNT(*) AS count FROM categories')
