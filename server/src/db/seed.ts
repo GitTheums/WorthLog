@@ -23,23 +23,24 @@ export function seedDefaultCategories(db: Database.Database): void {
 
   const insert = db.prepare(`
     INSERT INTO categories (
-      id, name, color, icon, archived_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, NULL, ?, ?)
+      id, name, color, icon, sort_order, archived_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, NULL, ?, ?)
   `);
 
   const seed = db.transaction(() => {
     const now = new Date().toISOString();
 
-    for (const category of DEFAULT_CATEGORIES) {
+    DEFAULT_CATEGORIES.forEach((category, index) => {
       insert.run(
         randomUUID(),
         category.name,
         category.color,
         category.icon,
+        index,
         now,
         now,
       );
-    }
+    });
   });
 
   seed();

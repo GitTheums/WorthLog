@@ -4,7 +4,7 @@ import { openDatabase } from './db/index.js';
 
 const config = loadConfig();
 const db = openDatabase(config.DATA_DIR);
-const app = createApp(db);
+const app = createApp(db, { dataDir: config.DATA_DIR });
 
 app.listen(config.PORT, () => {
   console.log(

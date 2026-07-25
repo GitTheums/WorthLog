@@ -12,7 +12,7 @@ export class CategoryInUseError extends DatabaseError {
   constructor(categoryId: string) {
     super(
       'CATEGORY_IN_USE',
-      `Category ${categoryId} has snapshot data and cannot be deleted`,
+      `Category ${categoryId} has snapshot history and cannot be permanently deleted. Archive it instead.`,
     );
     this.name = 'CategoryInUseError';
   }
@@ -36,5 +36,12 @@ export class UniqueConstraintError extends DatabaseError {
   constructor(message: string) {
     super('UNIQUE_CONSTRAINT', message);
     this.name = 'UniqueConstraintError';
+  }
+}
+
+export class ValidationError extends DatabaseError {
+  constructor(message: string) {
+    super('VALIDATION_ERROR', message);
+    this.name = 'ValidationError';
   }
 }

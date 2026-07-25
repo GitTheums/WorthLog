@@ -10,6 +10,7 @@ export interface CategoryRow {
   name: string;
   color: string;
   icon: string;
+  sort_order: number;
   archived_at: string | null;
   created_at: string;
   updated_at: string;
@@ -18,6 +19,7 @@ export interface CategoryRow {
 export interface SnapshotRow {
   id: string;
   date: string;
+  note: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +46,7 @@ export function mapCategory(row: CategoryRow): Category {
     name: row.name,
     color: row.color,
     icon: row.icon,
+    sortOrder: row.sort_order,
     archivedAt: row.archived_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -54,6 +57,7 @@ export function mapSnapshot(row: SnapshotRow): Snapshot {
   return {
     id: row.id,
     date: row.date,
+    note: row.note,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -77,4 +81,10 @@ export function mapSetting(row: SettingRow): Setting {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+export function totalValueCents(
+  values: ReadonlyArray<{ amountCents: number }>,
+): number {
+  return values.reduce((sum, value) => sum + value.amountCents, 0);
 }

@@ -1,30 +1,44 @@
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
-import { SnapshotNotFoundError, UniqueConstraintError } from '../errors.js';
+import {
+  SnapshotNotFoundError,
+  UniqueConstraintError,
+  ValidationError,
+} from '../errors.js';
 import {
   mapSnapshot,
   mapSnapshotValue,
+  totalValueCents,
   type SnapshotRow,
   type SnapshotValueRow,
 } from '../mappers.js';
 import type {
+  ListSnapshotsOptions,
   Snapshot,
   SnapshotValue,
+  SnapshotWithDetails,
   SnapshotWithValues,
   UpsertSnapshotInput,
 } from '../types.js';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+const SNAPSHOT_SELECT = `
+  SELECT id, date, note, created_at, updated_at
+  FROM snapshots
+`;
+
 function assertValidDate(date: string): void {
   if (!DATE_PATTERN.test(date)) {
-    throw new Error(`Snapshot date must be YYYY-MM-DD, received "${date}"`);
+    throw new ValidationError(
+      `Snapshot date must be YYYY-MM-DD, received "${date}"`,
+    );
   }
 }
 
 function assertIntegerCents(amountCents: number): void {
   if (!Number.isInteger(amountCents) || amountCents < 0) {
-    throw new Error(
+    throw new ValidationError(
       `amountCents must be a non-negative integer, received ${String(amountCents)}`,
     );
   }
@@ -40,16 +54,48 @@ function isUniqueConstraintError(error: unknown): boolean {
   );
 }
 
-export function listSnapshots(db: Database.Database): Snapshot[] {
+function withDetails(snapshot: SnapshotWithValues): SnapshotWithDetails {
+  return {
+    ...snapshot,
+    totalValueCents: totalValueCents(snapshot.values),
+  };
+}
+
+export function listSnapshots(
+  db: Database.Database,
+  options: ListSnapshotsOptions = {},
+): Snapshot[] {
+  if (options.from !== undefined) {
+    assertValidDate(options.from);
+  }
+  if (options.to !== undefined) {
+    assertValidDate(options.to);
+  }
+
+  const clauses: string[] = [];
+  const params: string[] = [];
+
+  if (options.from !== undefined) {
+    clauses.push('date >= ?');
+    params.push(options.from);
+  }
+  if (options.to !== undefined) {
+    clauses.push('date <= ?');
+    params.push(options.to);
+  }
+
+  const where =
+    clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
+
   const rows = db
     .prepare(
       `
-        SELECT id, date, created_at, updated_at
-        FROM snapshots
+        ${SNAPSHOT_SELECT}
+        ${where}
         ORDER BY date ASC
       `,
     )
-    .all() as SnapshotRow[];
+    .all(...params) as SnapshotRow[];
 
   return rows.map(mapSnapshot);
 }
@@ -61,8 +107,7 @@ export function getSnapshotById(
   const row = db
     .prepare(
       `
-        SELECT id, date, created_at, updated_at
-        FROM snapshots
+        ${SNAPSHOT_SELECT}
         WHERE id = ?
       `,
     )
@@ -80,8 +125,7 @@ export function getSnapshotByDate(
   const row = db
     .prepare(
       `
-        SELECT id, date, created_at, updated_at
-        FROM snapshots
+        ${SNAPSHOT_SELECT}
         WHERE date = ?
       `,
     )
@@ -138,10 +182,28 @@ export function getSnapshotWithValuesByDate(
   };
 }
 
+export function getSnapshotDetailsByDate(
+  db: Database.Database,
+  date: string,
+): SnapshotWithDetails | null {
+  const snapshot = getSnapshotWithValuesByDate(db, date);
+  return snapshot ? withDetails(snapshot) : null;
+}
+
+export function listSnapshotDetails(
+  db: Database.Database,
+  options: ListSnapshotsOptions = {},
+): SnapshotWithDetails[] {
+  return listSnapshots(db, options).map((snapshot) => {
+    const values = listSnapshotValues(db, snapshot.id);
+    return withDetails({ ...snapshot, values });
+  });
+}
+
 export function upsertSnapshot(
   db: Database.Database,
   input: UpsertSnapshotInput,
-): SnapshotWithValues {
+): SnapshotWithDetails {
   assertValidDate(input.date);
 
   for (const value of input.values) {
@@ -150,11 +212,11 @@ export function upsertSnapshot(
 
   const run = db.transaction((payload: UpsertSnapshotInput) => {
     const now = new Date().toISOString();
+    const note = payload.note ?? null;
     const existing = db
       .prepare(
         `
-          SELECT id, date, created_at, updated_at
-          FROM snapshots
+          ${SNAPSHOT_SELECT}
           WHERE date = ?
         `,
       )
@@ -167,10 +229,10 @@ export function upsertSnapshot(
       db.prepare(
         `
           UPDATE snapshots
-          SET updated_at = ?
+          SET note = ?, updated_at = ?
           WHERE id = ?
         `,
-      ).run(now, snapshotId);
+      ).run(note, now, snapshotId);
 
       db.prepare('DELETE FROM snapshot_values WHERE snapshot_id = ?').run(
         snapshotId,
@@ -181,10 +243,10 @@ export function upsertSnapshot(
       try {
         db.prepare(
           `
-            INSERT INTO snapshots (id, date, created_at, updated_at)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO snapshots (id, date, note, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
           `,
-        ).run(snapshotId, payload.date, now, now);
+        ).run(snapshotId, payload.date, note, now, now);
       } catch (error) {
         if (isUniqueConstraintError(error)) {
           throw new UniqueConstraintError(
@@ -218,10 +280,22 @@ export function upsertSnapshot(
     if (!result) {
       throw new SnapshotNotFoundError(snapshotId);
     }
-    return result;
+    return withDetails(result);
   });
 
   return run(input);
+}
+
+export function deleteSnapshotByDate(
+  db: Database.Database,
+  date: string,
+): void {
+  assertValidDate(date);
+
+  const result = db.prepare('DELETE FROM snapshots WHERE date = ?').run(date);
+  if (result.changes === 0) {
+    throw new SnapshotNotFoundError(date);
+  }
 }
 
 export function listAllSnapshotValues(

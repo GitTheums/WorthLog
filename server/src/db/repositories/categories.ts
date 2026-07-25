@@ -4,6 +4,7 @@ import {
   CategoryInUseError,
   CategoryNotFoundError,
   UniqueConstraintError,
+  ValidationError,
 } from '../errors.js';
 import { mapCategory, type CategoryRow } from '../mappers.js';
 import type {
@@ -15,6 +16,15 @@ import type {
 interface CountRow {
   count: number;
 }
+
+interface MaxSortRow {
+  max_sort: number;
+}
+
+const CATEGORY_SELECT = `
+  SELECT id, name, color, icon, sort_order, archived_at, created_at, updated_at
+  FROM categories
+`;
 
 function isUniqueConstraintError(error: unknown): boolean {
   return (
@@ -36,19 +46,17 @@ export function listCategories(
       ? db
           .prepare(
             `
-              SELECT id, name, color, icon, archived_at, created_at, updated_at
-              FROM categories
-              ORDER BY name COLLATE NOCASE ASC
+              ${CATEGORY_SELECT}
+              ORDER BY sort_order ASC, name COLLATE NOCASE ASC
             `,
           )
           .all()
       : db
           .prepare(
             `
-              SELECT id, name, color, icon, archived_at, created_at, updated_at
-              FROM categories
+              ${CATEGORY_SELECT}
               WHERE archived_at IS NULL
-              ORDER BY name COLLATE NOCASE ASC
+              ORDER BY sort_order ASC, name COLLATE NOCASE ASC
             `,
           )
           .all()
@@ -64,8 +72,7 @@ export function getCategoryById(
   const row = db
     .prepare(
       `
-        SELECT id, name, color, icon, archived_at, created_at, updated_at
-        FROM categories
+        ${CATEGORY_SELECT}
         WHERE id = ?
       `,
     )
@@ -80,15 +87,24 @@ export function createCategory(
 ): Category {
   const id = randomUUID();
   const now = new Date().toISOString();
+  const maxSort = db
+    .prepare(
+      `
+        SELECT COALESCE(MAX(sort_order), -1) AS max_sort
+        FROM categories
+      `,
+    )
+    .get() as MaxSortRow;
+  const sortOrder = maxSort.max_sort + 1;
 
   try {
     db.prepare(
       `
         INSERT INTO categories (
-          id, name, color, icon, archived_at, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, NULL, ?, ?)
+          id, name, color, icon, sort_order, archived_at, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, NULL, ?, ?)
       `,
-    ).run(id, input.name, input.color, input.icon, now, now);
+    ).run(id, input.name, input.color, input.icon, sortOrder, now, now);
   } catch (error) {
     if (isUniqueConstraintError(error)) {
       throw new UniqueConstraintError(
@@ -118,16 +134,24 @@ export function updateCategory(
   const name = input.name ?? existing.name;
   const color = input.color ?? existing.color;
   const icon = input.icon ?? existing.icon;
+  const sortOrder = input.sortOrder ?? existing.sortOrder;
   const now = new Date().toISOString();
+
+  let archivedAt = existing.archivedAt;
+  if (input.archived === true) {
+    archivedAt = existing.archivedAt ?? now;
+  } else if (input.archived === false) {
+    archivedAt = null;
+  }
 
   try {
     db.prepare(
       `
         UPDATE categories
-        SET name = ?, color = ?, icon = ?, updated_at = ?
+        SET name = ?, color = ?, icon = ?, sort_order = ?, archived_at = ?, updated_at = ?
         WHERE id = ?
       `,
-    ).run(name, color, icon, now, id);
+    ).run(name, color, icon, sortOrder, archivedAt, now, id);
   } catch (error) {
     if (isUniqueConstraintError(error)) {
       throw new UniqueConstraintError(
@@ -148,26 +172,42 @@ export function archiveCategory(
   db: Database.Database,
   id: string,
 ): Category {
-  const existing = getCategoryById(db, id);
-  if (!existing) {
-    throw new CategoryNotFoundError(id);
+  return updateCategory(db, id, { archived: true });
+}
+
+export function reorderCategories(
+  db: Database.Database,
+  categoryIds: string[],
+): Category[] {
+  if (categoryIds.length === 0) {
+    throw new ValidationError('categoryIds must not be empty');
   }
 
-  const now = new Date().toISOString();
-
-  db.prepare(
-    `
-      UPDATE categories
-      SET archived_at = ?, updated_at = ?
-      WHERE id = ?
-    `,
-  ).run(now, now, id);
-
-  const archived = getCategoryById(db, id);
-  if (!archived) {
-    throw new CategoryNotFoundError(id);
+  if (new Set(categoryIds).size !== categoryIds.length) {
+    throw new ValidationError('categoryIds must not contain duplicates');
   }
-  return archived;
+
+  const run = db.transaction((ids: string[]) => {
+    const now = new Date().toISOString();
+    const update = db.prepare(
+      `
+        UPDATE categories
+        SET sort_order = ?, updated_at = ?
+        WHERE id = ?
+      `,
+    );
+
+    ids.forEach((categoryId, index) => {
+      const result = update.run(index, now, categoryId);
+      if (result.changes === 0) {
+        throw new CategoryNotFoundError(categoryId);
+      }
+    });
+
+    return listCategories(db, { includeArchived: true });
+  });
+
+  return run(categoryIds);
 }
 
 export function deleteCategory(db: Database.Database, id: string): void {
