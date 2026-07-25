@@ -84,7 +84,7 @@ describe('App dashboard', () => {
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 
-  it('opens the snapshot modal and settings placeholder, and toggles theme', async () => {
+  it('opens the snapshot modal and settings dialog, and toggles theme', async () => {
     mockApi();
     const user = userEvent.setup();
 
@@ -106,7 +106,17 @@ describe('App dashboard', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Open settings' }));
-    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument();
+    const settingsDialog = screen.getByRole('dialog', { name: 'Settings' });
+    expect(settingsDialog).toBeInTheDocument();
+    expect(
+      within(settingsDialog).getByRole('tab', { name: 'Categories' }),
+    ).toBeInTheDocument();
+    expect(
+      within(settingsDialog).getByRole('tab', { name: 'General' }),
+    ).toBeInTheDocument();
+    expect(
+      within(settingsDialog).getByRole('tab', { name: 'Backup and restore' }),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Switch to dark theme' }));
     await waitFor(() => {

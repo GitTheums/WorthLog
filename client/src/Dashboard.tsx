@@ -8,7 +8,7 @@ import { EmptyState } from './components/EmptyState';
 import { ErrorState } from './components/ErrorState';
 import { Header } from './components/Header';
 import { HistoryTable } from './components/HistoryTable';
-import { PlaceholderDialog } from './components/PlaceholderDialog';
+import { SettingsDialog } from './components/settings/SettingsDialog';
 import { DashboardSkeleton } from './components/Skeleton';
 import {
   SnapshotModal,
@@ -34,6 +34,7 @@ export function Dashboard() {
     settings,
     loading: settingsLoading,
     error: settingsError,
+    reload: reloadSettings,
   } = useSettings();
   const [range, setRange] = useState<DashboardRange | null>(null);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
@@ -43,6 +44,7 @@ export function Dashboard() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [categoriesRevision, setCategoriesRevision] = useState(0);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -63,6 +65,12 @@ export function Dashboard() {
     settingsLoading || range === null || (dashboardLoading && !data);
   const error = settingsError ?? dashboardError;
   const isEmpty = Boolean(data && data.historyRows.length === 0);
+
+  const refreshAppData = () => {
+    reload();
+    reloadSettings();
+    setCategoriesRevision((value) => value + 1);
+  };
 
   const openAddSnapshot = (trigger?: HTMLElement) => {
     restoreFocusRef.current = trigger ?? null;
@@ -178,6 +186,9 @@ export function Dashboard() {
             );
           }}
           onOpenSettings={() => {
+            const active = document.activeElement;
+            restoreFocusRef.current =
+              active instanceof HTMLElement ? active : null;
             setSettingsDialogOpen(true);
           }}
         />
@@ -191,6 +202,7 @@ export function Dashboard() {
         editDate={editDate}
         currency={currency}
         dashboard={data}
+        categoriesRevision={categoriesRevision}
         restoreFocusTo={restoreFocusRef}
         onClose={() => {
           setSnapshotOpen(false);
@@ -228,18 +240,32 @@ export function Dashboard() {
         }}
       />
 
-      <PlaceholderDialog
-        open={settingsDialogOpen}
-        title="Settings"
-        description="Settings will be available in a later update. You will be able to change currency and the default dashboard range here."
-        onClose={() => {
-          setSettingsDialogOpen(false);
+      {settings ? (
+        <SettingsDialog
+          open={settingsDialogOpen}
+          settings={settings}
+          dashboard={data}
+          restoreFocusTo={restoreFocusRef}
+          onClose={() => {
+            setSettingsDialogOpen(false);
+          }}
+          onToast={(tone, message) => {
+            setToast({
+              id: crypto.randomUUID(),
+              tone,
+              message,
+            });
+          }}
+          onDataChanged={refreshAppData}
+        />
+      ) : null}
+
+      <Toast
+        toast={toast}
+        onDismiss={() => {
+          setToast(null);
         }}
       />
-
-      <Toast toast={toast} onDismiss={() => {
-        setToast(null);
-      }} />
     </div>
   );
 }

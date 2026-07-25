@@ -16,6 +16,20 @@ export interface Category {
   updatedAt: string;
 }
 
+export interface CreateCategoryPayload {
+  name: string;
+  color: string;
+  icon: string;
+}
+
+export interface UpdateCategoryPayload {
+  name?: string;
+  color?: string;
+  icon?: string;
+  sortOrder?: number;
+  archived?: boolean;
+}
+
 export interface SnapshotValue {
   id: string;
   snapshotId: string;
@@ -41,6 +55,53 @@ export interface UpsertSnapshotPayload {
     categoryId: string;
     amountCents: number;
   }>;
+}
+
+export interface BackupExport {
+  version: 1;
+  exportedAt: string;
+  settings: Array<{
+    key: string;
+    value: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  categories: Array<{
+    id: string;
+    name: string;
+    color: string;
+    icon: string;
+    sortOrder: number;
+    archivedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  snapshots: Array<{
+    id: string;
+    date: string;
+    note: string | null;
+    createdAt: string;
+    updatedAt: string;
+    values: Array<{
+      id: string;
+      snapshotId: string;
+      categoryId: string;
+      amountCents: number;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+  }>;
+}
+
+export interface BackupImportResult {
+  backupPath: string;
+  importedAt: string;
+  counts: {
+    settings: number;
+    categories: number;
+    snapshots: number;
+    values: number;
+  };
 }
 
 export interface DashboardData {

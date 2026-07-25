@@ -31,6 +31,8 @@ interface SnapshotModalProps {
   editDate?: string | null;
   currency: string;
   dashboard: DashboardData | null;
+  /** Bump when categories change so an open form reloads the field list. */
+  categoriesRevision?: number;
   restoreFocusTo?: RefObject<HTMLElement | null>;
   onClose: () => void;
   onSaved: (message: string) => void;
@@ -79,6 +81,7 @@ export function SnapshotModal({
   editDate = null,
   currency,
   dashboard,
+  categoriesRevision = 0,
   restoreFocusTo,
   onClose,
   onSaved,
@@ -177,7 +180,7 @@ export function SnapshotModal({
       return;
     }
     void loadModalData();
-  }, [open, loadModalData]);
+  }, [open, loadModalData, categoriesRevision]);
 
   useEffect(() => {
     if (!open || isEdit || loading || !date) {
