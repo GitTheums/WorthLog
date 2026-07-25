@@ -44,6 +44,58 @@ function AllocationTooltip({
   );
 }
 
+function AllocationLabel({
+  cx,
+  cy,
+  midAngle,
+  innerRadius,
+  outerRadius,
+  percent,
+  name,
+}: {
+  cx?: number;
+  cy?: number;
+  midAngle?: number;
+  innerRadius?: number;
+  outerRadius?: number;
+  percent?: number;
+  name?: string;
+}) {
+  if (
+    cx === undefined ||
+    cy === undefined ||
+    midAngle === undefined ||
+    innerRadius === undefined ||
+    outerRadius === undefined ||
+    percent === undefined ||
+    !name
+  ) {
+    return null;
+  }
+
+  // Hide tiny slices to avoid clutter; legend still lists every category.
+  if (percent < 0.08) {
+    return null;
+  }
+
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
+  const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="var(--chart-label)"
+      textAnchor="middle"
+      dominantBaseline="central"
+      className="allocation-chart__slice-label"
+    >
+      {formatSharePercent(percent * 100)}
+    </text>
+  );
+}
+
 export function AllocationChart({ data, currency }: AllocationChartProps) {
   const slices = data.latestAllocation
     .filter((item) => item.amountCents > 0)
@@ -51,6 +103,8 @@ export function AllocationChart({ data, currency }: AllocationChartProps) {
       ...item,
       fill: item.color,
     }));
+
+  const centerTotal = data.currentTotalCents;
 
   return (
     <section className="allocation-chart" aria-label="Current allocation">
@@ -60,7 +114,9 @@ export function AllocationChart({ data, currency }: AllocationChartProps) {
       </div>
 
       {slices.length === 0 ? (
-        <p className="allocation-chart__empty">No allocation data yet.</p>
+        <p className="allocation-chart__empty" role="status">
+          No positive allocation in the latest snapshot.
+        </p>
       ) : (
         <>
           <div className="allocation-chart__canvas">
@@ -70,12 +126,31 @@ export function AllocationChart({ data, currency }: AllocationChartProps) {
                   data={slices}
                   dataKey="amountCents"
                   nameKey="name"
-                  innerRadius="62%"
-                  outerRadius="88%"
+                  innerRadius="58%"
+                  outerRadius="86%"
                   paddingAngle={2}
-                  strokeWidth={0}
+                  stroke="var(--card)"
+                  strokeWidth={2}
+                  label={AllocationLabel}
+                  labelLine={false}
                 />
                 <Tooltip content={<AllocationTooltip currency={currency} />} />
+                <text
+                  x="50%"
+                  y="46%"
+                  textAnchor="middle"
+                  className="allocation-chart__center-label"
+                >
+                  Total
+                </text>
+                <text
+                  x="50%"
+                  y="56%"
+                  textAnchor="middle"
+                  className="allocation-chart__center-value"
+                >
+                  {formatMoney(centerTotal, currency)}
+                </text>
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -89,8 +164,13 @@ export function AllocationChart({ data, currency }: AllocationChartProps) {
                   aria-hidden="true"
                 />
                 <span className="allocation-chart__legend-name">{item.name}</span>
-                <span className="allocation-chart__legend-value">
-                  {formatSharePercent(item.percent)}
+                <span className="allocation-chart__legend-meta">
+                  <span className="allocation-chart__legend-money">
+                    {formatMoney(item.amountCents, currency)}
+                  </span>
+                  <span className="allocation-chart__legend-value">
+                    {formatSharePercent(item.percent)}
+                  </span>
                 </span>
               </li>
             ))}

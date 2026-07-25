@@ -34,6 +34,37 @@
   border-radius: 14px;
 }
 
+.history-table__scroll:focus-visible {
+  box-shadow: var(--focus);
+}
+
+.history-table__empty {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text-secondary);
+}
+
+.history-table__category-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.history-table__swatch {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.history-table__zero {
+  color: var(--neutral);
+  opacity: 0.85;
+}
+
 .history-table table {
   width: 100%;
   border-collapse: collapse;

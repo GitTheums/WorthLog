@@ -9,11 +9,17 @@
   box-shadow: var(--shadow);
 }
 
+.total-chart--refreshing {
+  opacity: 0.86;
+  transition: opacity var(--transition);
+}
+
 .total-chart__header {
   display: flex;
   align-items: start;
   justify-content: space-between;
   gap: var(--space-4);
+  flex-wrap: wrap;
 }
 
 .total-chart__title {
@@ -30,27 +36,130 @@
 }
 
 .total-chart__canvas {
-  min-height: 320px;
-  height: 320px;
+  min-height: 300px;
+  height: 300px;
+}
+
+.total-chart__notice,
+.total-chart__message {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.total-chart__message {
+  display: grid;
+  gap: 0.35rem;
+  align-content: center;
+  min-height: 220px;
+}
+
+.total-chart__message-title {
+  margin: 0;
+  font-weight: 650;
+}
+
+.total-chart__message-body {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.total-chart__notice {
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.total-chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.total-chart__legend-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition:
+    background var(--transition),
+    opacity var(--transition),
+    border-color var(--transition);
+}
+
+.total-chart__legend-button:hover {
+  border-color: var(--text-secondary);
+}
+
+.total-chart__legend-button--hidden {
+  opacity: 0.45;
+}
+
+.total-chart__legend-swatch {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+  flex-shrink: 0;
 }
 
 .chart-tooltip {
+  min-width: 10rem;
   padding: 0.7rem 0.85rem;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--card-raised);
   box-shadow: var(--shadow);
+  color: var(--text);
 }
 
 .chart-tooltip__date {
-  margin: 0 0 0.2rem;
+  margin: 0 0 0.45rem;
   color: var(--text-secondary);
   font-size: 0.8rem;
 }
 
+.chart-tooltip__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.chart-tooltip__row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+  font-size: 0.88rem;
+}
+
+.chart-tooltip__swatch {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+}
+
+.chart-tooltip__label {
+  color: var(--text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .chart-tooltip__value {
   margin: 0;
-  font-size: 0.95rem;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
 }

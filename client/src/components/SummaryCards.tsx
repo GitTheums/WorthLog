@@ -9,17 +9,14 @@ interface SummaryCardsProps {
 }
 
 export function SummaryCards({ data, currency }: SummaryCardsProps) {
-  const changeSinceFirstPercent =
-    data.firstTotalCents && data.firstTotalCents !== 0 && data.changeSinceFirstCents !== null
-      ? (data.changeSinceFirstCents / data.firstTotalCents) * 100
-      : null;
+  const hasRangeData = data.timeSeries.length > 0;
 
   return (
     <section className="summary-cards" aria-label="Portfolio summary">
       <article className="summary-card">
         <h2 className="summary-card__label">Total value</h2>
         <p className="summary-card__value">
-          {formatMoney(data.currentTotalCents, currency)}
+          {hasRangeData ? formatMoney(data.currentTotalCents, currency) : '—'}
         </p>
       </article>
 
@@ -39,7 +36,7 @@ export function SummaryCards({ data, currency }: SummaryCardsProps) {
         <p className="summary-card__value summary-card__value--compact">
           <ChangeValue
             amountCents={data.changeSinceFirstCents}
-            percent={changeSinceFirstPercent}
+            percent={data.changeSinceFirstPercent}
             currency={currency}
           />
         </p>

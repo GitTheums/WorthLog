@@ -56,15 +56,15 @@ export function Dashboard() {
   const {
     data,
     loading: dashboardLoading,
+    refreshing,
     error: dashboardError,
     reload,
   } = useDashboard(range);
 
   const currency = settings?.currency ?? 'EUR';
-  const showSkeleton =
-    settingsLoading || range === null || (dashboardLoading && !data);
-  const error = settingsError ?? dashboardError;
-  const isEmpty = Boolean(data && data.historyRows.length === 0);
+  const fatalError = settingsError ?? (!data ? dashboardError : null);
+  const recoverableError = data ? dashboardError : null;
+  const isEmptyPortfolio = Boolean(data && !data.hasSnapshots);
 
   const refreshAppData = () => {
     reload();
@@ -129,17 +129,17 @@ export function Dashboard() {
 
   let mainContent: ReactNode;
 
-  if (showSkeleton) {
+  if (settingsLoading || range === null || (dashboardLoading && !data)) {
     mainContent = <DashboardSkeleton />;
-  } else if (error) {
+  } else if (fatalError) {
     mainContent = (
       <ErrorState
         title="Could not load dashboard"
-        message={error}
+        message={fatalError}
         onRetry={reload}
       />
     );
-  } else if (isEmpty || !data) {
+  } else if (!data || isEmptyPortfolio) {
     mainContent = (
       <EmptyState
         onAddSnapshot={() => {
@@ -150,6 +150,14 @@ export function Dashboard() {
   } else {
     mainContent = (
       <div className="dashboard__content">
+        {recoverableError ? (
+          <ErrorState
+            title="Could not refresh dashboard"
+            message={recoverableError}
+            onRetry={reload}
+          />
+        ) : null}
+
         <SummaryCards data={data} currency={currency} />
 
         <div className="dashboard__charts">
@@ -158,6 +166,7 @@ export function Dashboard() {
             currency={currency}
             range={range}
             onRangeChange={setRange}
+            refreshing={refreshing}
           />
           <AllocationChart data={data} currency={currency} />
         </div>

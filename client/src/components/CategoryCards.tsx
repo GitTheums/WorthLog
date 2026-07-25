@@ -1,5 +1,5 @@
 import type { DashboardData } from '../api/types';
-import { formatMoney } from '../lib/format';
+import { formatMoney, formatSharePercent } from '../lib/format';
 import { getCategoryIcon } from '../lib/icons';
 import './CategoryCards.css';
 
@@ -13,13 +13,14 @@ export function CategoryCards({ data, currency }: CategoryCardsProps) {
     return null;
   }
 
-  const total = data.currentTotalCents || 1;
+  const total = data.currentTotalCents;
 
   return (
     <section className="category-cards" aria-label="Category values">
       {data.latestCategoryValues.map((category) => {
         const Icon = getCategoryIcon(category.icon);
-        const share = (category.amountCents / total) * 100;
+        const share =
+          total === 0 ? 0 : (category.amountCents / total) * 100;
 
         return (
           <article key={category.categoryId} className="category-card">
@@ -40,17 +41,24 @@ export function CategoryCards({ data, currency }: CategoryCardsProps) {
               {formatMoney(category.amountCents, currency)}
             </p>
             <div className="category-card__meta">
-              <div className="category-card__bar" aria-hidden="true">
+              <div
+                className="category-card__bar"
+                role="meter"
+                aria-label={`${category.name} share of portfolio`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(share)}
+              >
                 <span
                   className="category-card__bar-fill"
                   style={{
-                    width: `${String(Math.min(share, 100))}%`,
+                    width: `${String(Math.min(Math.max(share, 0), 100))}%`,
                     background: category.color,
                   }}
                 />
               </div>
               <span className="category-card__share">
-                {share.toFixed(1)}%
+                {formatSharePercent(share)}
               </span>
             </div>
           </article>

@@ -23,12 +23,14 @@ describe('dashboard API', () => {
     expect(response.status).toBe(200);
     expect(response.body.data).toMatchObject({
       range: 'all',
+      hasSnapshots: false,
       currentTotalCents: 0,
       previousTotalCents: null,
       changeCents: null,
       changePercent: null,
       firstTotalCents: null,
       changeSinceFirstCents: null,
+      changeSinceFirstPercent: null,
       latestDate: null,
       timeSeries: [],
       categoryTimeSeries: [],
@@ -63,12 +65,14 @@ describe('dashboard API', () => {
     expect(response.status).toBe(200);
     expect(response.body.data).toMatchObject({
       range: 'all',
+      hasSnapshots: true,
       currentTotalCents: 12_000,
       previousTotalCents: 8_000,
       changeCents: 4_000,
       changePercent: 50,
       firstTotalCents: 4_000,
       changeSinceFirstCents: 8_000,
+      changeSinceFirstPercent: 200,
       latestDate: '2026-03-01',
     });
     expect(response.body.data.timeSeries).toHaveLength(3);

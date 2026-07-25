@@ -106,12 +106,14 @@ export interface BackupImportResult {
 
 export interface DashboardData {
   range: DashboardRange;
+  hasSnapshots: boolean;
   currentTotalCents: number;
   previousTotalCents: number | null;
   changeCents: number | null;
   changePercent: number | null;
   firstTotalCents: number | null;
   changeSinceFirstCents: number | null;
+  changeSinceFirstPercent: number | null;
   latestDate: string | null;
   timeSeries: Array<{ date: string; totalValueCents: number }>;
   categoryTimeSeries: Array<{

@@ -46,6 +46,9 @@ describe('App dashboard', () => {
     expect(
       screen.getByRole('button', { name: 'Add your first snapshot' }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/tracks the total EUR value of each investment category/i),
+    ).toBeInTheDocument();
   });
 
   it('shows an error state when the API fails', async () => {

@@ -98,12 +98,14 @@ export const snapshotFixture: SnapshotDetails = {
 
 export const emptyDashboardFixture: DashboardData = {
   range: '3m',
+  hasSnapshots: false,
   currentTotalCents: 0,
   previousTotalCents: null,
   changeCents: null,
   changePercent: null,
   firstTotalCents: null,
   changeSinceFirstCents: null,
+  changeSinceFirstPercent: null,
   latestDate: null,
   timeSeries: [],
   categoryTimeSeries: [],
@@ -114,12 +116,14 @@ export const emptyDashboardFixture: DashboardData = {
 
 export const dashboardFixture: DashboardData = {
   range: '3m',
+  hasSnapshots: true,
   currentTotalCents: 12_000,
   previousTotalCents: 8_000,
   changeCents: 4_000,
   changePercent: 50,
   firstTotalCents: 4_000,
   changeSinceFirstCents: 8_000,
+  changeSinceFirstPercent: 200,
   latestDate: '2026-03-01',
   timeSeries: [
     { date: '2026-01-01', totalValueCents: 4_000 },

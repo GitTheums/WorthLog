@@ -1,15 +1,29 @@
 .empty-state {
+  position: relative;
   display: grid;
   justify-items: start;
   gap: var(--space-4);
+  overflow: hidden;
   padding: clamp(2rem, 4vw, 3.5rem);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  background: var(--card);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--card) 88%, var(--accent-soft)), var(--card));
   box-shadow: var(--shadow);
 }
 
+.empty-state__glow {
+  position: absolute;
+  inset: auto -10% 40% auto;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-soft), transparent 70%);
+  pointer-events: none;
+}
+
 .empty-state__icon {
+  position: relative;
   display: grid;
   place-items: center;
   width: 3.25rem;
@@ -20,20 +34,33 @@
 }
 
 .empty-state__title {
+  position: relative;
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.45rem;
   font-weight: 650;
   letter-spacing: -0.02em;
 }
 
 .empty-state__message {
+  position: relative;
   margin: 0;
   max-width: 42rem;
   color: var(--text-secondary);
   font-size: 0.98rem;
 }
 
+.empty-state__list {
+  position: relative;
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
 .empty-state__button {
+  position: relative;
   min-height: 2.75rem;
   padding: 0.7rem 1.15rem;
   border: none;
@@ -46,4 +73,8 @@
 
 .empty-state__button:hover {
   opacity: 0.92;
+}
+
+.empty-state__button:focus-visible {
+  box-shadow: var(--focus);
 }

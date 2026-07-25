@@ -34,6 +34,11 @@
   box-shadow: 0 1px 2px rgba(18, 23, 34, 0.06);
 }
 
+.range-controls__button:focus-visible {
+  box-shadow: var(--focus);
+  z-index: 1;
+}
+
 [data-theme='dark'] .range-controls__button--active {
   background: var(--card-raised);
   box-shadow: none;

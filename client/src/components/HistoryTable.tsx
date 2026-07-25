@@ -16,18 +16,52 @@ export function HistoryTable({
   onEdit,
   onDelete,
 }: HistoryTableProps) {
-  const categoryNames = new Map(
-    data.latestCategoryValues.map((category) => [
-      category.categoryId,
-      category.name,
-    ]),
-  );
+  const categoryMeta = new Map<
+    string,
+    { name: string; color: string }
+  >();
 
-  for (const series of data.categoryTimeSeries) {
-    categoryNames.set(series.categoryId, series.name);
+  for (const category of data.latestCategoryValues) {
+    categoryMeta.set(category.categoryId, {
+      name: category.name,
+      color: category.color,
+    });
   }
 
-  const categoryIds = [...categoryNames.keys()];
+  for (const series of data.categoryTimeSeries) {
+    if (!categoryMeta.has(series.categoryId)) {
+      categoryMeta.set(series.categoryId, {
+        name: series.name,
+        color: series.color,
+      });
+    }
+  }
+
+  // Prefer series order (sort order from API), then any latest-only categories.
+  const categoryIds = [
+    ...data.categoryTimeSeries.map((series) => series.categoryId),
+    ...data.latestCategoryValues
+      .map((category) => category.categoryId)
+      .filter((id) => !data.categoryTimeSeries.some((series) => series.categoryId === id)),
+  ];
+
+  if (data.historyRows.length === 0) {
+    return (
+      <section className="history-table" aria-label="Snapshot history">
+        <div className="history-table__header">
+          <div>
+            <h2 className="history-table__title">History</h2>
+            <p className="history-table__subtitle">
+              Snapshot totals and category values
+            </p>
+          </div>
+        </div>
+        <p className="history-table__empty" role="status">
+          No snapshots fall inside the selected range.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="history-table" aria-label="Snapshot history">
@@ -35,12 +69,12 @@ export function HistoryTable({
         <div>
           <h2 className="history-table__title">History</h2>
           <p className="history-table__subtitle">
-            Snapshot totals and category values
+            Newest first · missing category values shown as {formatMoney(0, currency)}
           </p>
         </div>
       </div>
 
-      <div className="history-table__scroll">
+      <div className="history-table__scroll" tabIndex={0}>
         <table>
           <thead>
             <tr>
@@ -48,7 +82,16 @@ export function HistoryTable({
               <th scope="col">Total</th>
               {categoryIds.map((categoryId) => (
                 <th key={categoryId} scope="col">
-                  {categoryNames.get(categoryId)}
+                  <span className="history-table__category-head">
+                    <span
+                      className="history-table__swatch"
+                      style={{
+                        background: categoryMeta.get(categoryId)?.color,
+                      }}
+                      aria-hidden="true"
+                    />
+                    {categoryMeta.get(categoryId)?.name}
+                  </span>
                 </th>
               ))}
               <th scope="col">Note</th>
@@ -69,11 +112,21 @@ export function HistoryTable({
                   <td className="history-table__total">
                     {formatMoney(row.totalValueCents, currency)}
                   </td>
-                  {categoryIds.map((categoryId) => (
-                    <td key={`${row.date}-${categoryId}`}>
-                      {formatMoney(valuesByCategory.get(categoryId) ?? 0, currency)}
-                    </td>
-                  ))}
+                  {categoryIds.map((categoryId) => {
+                    const amount = valuesByCategory.get(categoryId) ?? 0;
+                    return (
+                      <td
+                        key={`${row.date}-${categoryId}`}
+                        className={
+                          amount === 0
+                            ? 'history-table__zero'
+                            : undefined
+                        }
+                      >
+                        {formatMoney(amount, currency)}
+                      </td>
+                    );
+                  })}
                   <td className="history-table__note">{row.note ?? '—'}</td>
                   <td className="history-table__actions">
                     <button
@@ -92,7 +145,11 @@ export function HistoryTable({
                       className="history-table__action history-table__action--danger"
                       aria-label={`Delete snapshot for ${formatSnapshotDate(row.date)}`}
                       onClick={(event) => {
-                        onDelete(row.date, row.totalValueCents, event.currentTarget);
+                        onDelete(
+                          row.date,
+                          row.totalValueCents,
+                          event.currentTarget,
+                        );
                       }}
                     >
                       <Trash2 size={15} strokeWidth={1.8} aria-hidden="true" />
