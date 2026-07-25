@@ -28,18 +28,43 @@ const SNAPSHOT_SELECT = `
   FROM snapshots
 `;
 
+function isValidCalendarDate(date: string): boolean {
+  const [yearText, monthText, dayText] = date.split('-');
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day)
+  ) {
+    return false;
+  }
+
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+  );
+}
+
 function assertValidDate(date: string): void {
-  if (!DATE_PATTERN.test(date)) {
+  if (!DATE_PATTERN.test(date) || !isValidCalendarDate(date)) {
     throw new ValidationError(
-      `Snapshot date must be YYYY-MM-DD, received "${date}"`,
+      `Snapshot date must be a valid YYYY-MM-DD calendar date, received "${date}"`,
     );
   }
 }
 
 function assertIntegerCents(amountCents: number): void {
-  if (!Number.isInteger(amountCents) || amountCents < 0) {
+  if (
+    !Number.isInteger(amountCents) ||
+    amountCents < 0 ||
+    amountCents > Number.MAX_SAFE_INTEGER
+  ) {
     throw new ValidationError(
-      `amountCents must be a non-negative integer, received ${String(amountCents)}`,
+      `amountCents must be a non-negative safe integer, received ${String(amountCents)}`,
     );
   }
 }

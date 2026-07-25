@@ -973,6 +973,8 @@ export function SettingsDialog({
                       className="settings-file-input"
                       type="file"
                       accept="application/json,.json"
+                      tabIndex={-1}
+                      aria-hidden="true"
                       onChange={(event) => {
                         void handleFileChosen(event);
                       }}

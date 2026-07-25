@@ -61,6 +61,56 @@ describe('snapshots API', () => {
     });
   });
 
+  it('PUT /api/snapshots/:date preserves archived category values', async () => {
+    seedSnapshot(ctx.db, '2026-06-01', {
+      Crypto: 1000,
+      Stocks: 2000,
+      Pokémon: 3000,
+      'CS2 Skins': 4000,
+    });
+
+    const categories = await request(ctx.app).get('/api/categories');
+    const crypto = categories.body.data.find(
+      (category: { name: string }) => category.name === 'Crypto',
+    ) as { id: string };
+    await request(ctx.app)
+      .patch(`/api/categories/${crypto.id}`)
+      .send({ archived: true })
+      .expect(200);
+
+    const active = await request(ctx.app).get('/api/categories');
+    const values = (
+      active.body.data as Array<{ id: string }>
+    ).map((category) => ({
+      categoryId: category.id,
+      amountCents: 500,
+    }));
+
+    const updated = await request(ctx.app)
+      .put('/api/snapshots/2026-06-01')
+      .send({ note: 'keep archive history', values });
+
+    expect(updated.status).toBe(200);
+    expect(updated.body.data.values).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          categoryId: crypto.id,
+          amountCents: 1000,
+        }),
+      ]),
+    );
+    expect(updated.body.data.totalValueCents).toBe(1000 + 500 * 3);
+  });
+
+  it('PUT /api/snapshots/:date rejects invalid calendar dates', async () => {
+    const response = await request(ctx.app)
+      .put('/api/snapshots/2026-02-31')
+      .send({ values: [] });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
   it('PUT /api/snapshots/:date rejects invalid payloads', async () => {
     const categories = listCategories(ctx.db);
     const [first, ...rest] = categories;

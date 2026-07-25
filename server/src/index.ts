@@ -39,11 +39,49 @@ const app = createApp(db, {
   ...(clientDistDir ? { clientDistDir } : {}),
 });
 
-app.listen(config.PORT, () => {
+const server = app.listen(config.PORT, () => {
   const mode = clientDistDir
     ? `API + frontend (${clientDistDir})`
     : 'API only';
   console.log(
     `WorthLog listening on http://localhost:${String(config.PORT)} [${mode}]`,
   );
+});
+
+let shuttingDown = false;
+
+function shutdown(signal: string): void {
+  if (shuttingDown) {
+    return;
+  }
+  shuttingDown = true;
+  console.log(`Received ${signal}, shutting down gracefully`);
+
+  const forceTimer = setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10_000);
+  forceTimer.unref();
+
+  server.close((closeError) => {
+    if (closeError) {
+      console.error('Error while closing HTTP server', closeError);
+    }
+
+    try {
+      db.close();
+    } catch (error) {
+      console.error('Failed to close database', error);
+      process.exit(1);
+    }
+
+    process.exit(closeError ? 1 : 0);
+  });
+}
+
+process.on('SIGINT', () => {
+  shutdown('SIGINT');
+});
+process.on('SIGTERM', () => {
+  shutdown('SIGTERM');
 });

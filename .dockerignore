@@ -46,3 +46,8 @@ logs
 
 # Docker compose override noise
 docker-compose.override.yml
+
+# Lint/test configs not copied into the image (keep context small)
+eslint.config.*
+**/vitest.config.*
+.github

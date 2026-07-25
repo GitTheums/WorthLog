@@ -99,21 +99,25 @@ export function updateAppSettings(
   db: Database.Database,
   patch: Partial<AppSettings>,
 ): AppSettings {
-  if (patch.currency !== undefined) {
-    if (patch.currency.trim().length === 0) {
-      throw new ValidationError('currency must not be empty');
+  const apply = db.transaction(() => {
+    if (patch.currency !== undefined) {
+      if (patch.currency.trim().length === 0) {
+        throw new ValidationError('currency must not be empty');
+      }
+      setSetting(db, 'currency', patch.currency.trim().toUpperCase());
     }
-    setSetting(db, 'currency', patch.currency.trim().toUpperCase());
-  }
 
-  if (patch.defaultRange !== undefined) {
-    if (!isDashboardRange(patch.defaultRange)) {
-      throw new ValidationError(
-        'defaultRange must be one of: 1m, 3m, 1y, all',
-      );
+    if (patch.defaultRange !== undefined) {
+      if (!isDashboardRange(patch.defaultRange)) {
+        throw new ValidationError(
+          'defaultRange must be one of: 1m, 3m, 1y, all',
+        );
+      }
+      setSetting(db, 'defaultRange', patch.defaultRange);
     }
-    setSetting(db, 'defaultRange', patch.defaultRange);
-  }
 
-  return getAppSettings(db);
+    return getAppSettings(db);
+  });
+
+  return apply();
 }

@@ -18,6 +18,17 @@ function zodDetails(error: ZodError): unknown {
   }));
 }
 
+function isExpressBodySyntaxError(
+  error: unknown,
+): error is SyntaxError & { status: number; body: unknown } {
+  return (
+    error instanceof SyntaxError &&
+    'body' in error &&
+    'status' in error &&
+    typeof (error as { status?: unknown }).status === 'number'
+  );
+}
+
 export function errorHandler(
   error: unknown,
   _req: Request,
@@ -29,7 +40,12 @@ export function errorHandler(
     return;
   }
 
-  const exposeStack = process.env['NODE_ENV'] !== 'production';
+  const exposeDetails = process.env['NODE_ENV'] !== 'production';
+
+  if (isExpressBodySyntaxError(error)) {
+    sendError(res, 400, 'INVALID_JSON', 'Request body must be valid JSON');
+    return;
+  }
 
   if (error instanceof HttpError) {
     sendError(
@@ -82,23 +98,27 @@ export function errorHandler(
     typeof error.code === 'string' &&
     error.code.startsWith('SQLITE_CONSTRAINT')
   ) {
-    const message =
-      error instanceof Error ? error.message : 'Database constraint failed';
-    sendError(res, 400, 'CONSTRAINT_ERROR', message);
+    console.error(error);
+    sendError(
+      res,
+      400,
+      'CONSTRAINT_ERROR',
+      exposeDetails && error instanceof Error
+        ? error.message
+        : 'Database constraint failed',
+    );
     return;
   }
 
+  console.error(error);
+
   const message =
     error instanceof Error ? error.message : 'Unexpected server error';
-
-  if (exposeStack) {
-    console.error(error);
-  }
 
   sendError(
     res,
     500,
     'INTERNAL_SERVER_ERROR',
-    exposeStack ? message : 'Internal server error',
+    exposeDetails ? message : 'Internal server error',
   );
 }

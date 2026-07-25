@@ -1,8 +1,10 @@
 # WorthLog
 
-WorthLog is a small self-hosted web application for manually recording the total EUR value of investment categories on selected dates.
+WorthLog is a small self-hosted web application for manually recording the total value of investment categories on selected dates (default display currency: EUR).
 
-It does **not** track individual assets, transactions, or live market prices. There is no authentication — it is intended for a single local user.
+It does **not** track individual assets, transactions, or live market prices.
+
+**Security model:** there is no login. Anyone who can reach the app can read and change all data. Run it only on a trusted local network or personal machine — do not expose it to the public internet.
 
 ## Requirements
 

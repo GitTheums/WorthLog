@@ -47,7 +47,7 @@ describe('App dashboard', () => {
       screen.getByRole('button', { name: 'Add your first snapshot' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/tracks the total EUR value of each investment category/i),
+      screen.getByText(/tracks the total value of each investment category/i),
     ).toBeInTheDocument();
   });
 

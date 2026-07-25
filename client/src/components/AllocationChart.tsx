@@ -44,58 +44,6 @@ function AllocationTooltip({
   );
 }
 
-function AllocationLabel({
-  cx,
-  cy,
-  midAngle,
-  innerRadius,
-  outerRadius,
-  percent,
-  name,
-}: {
-  cx?: number;
-  cy?: number;
-  midAngle?: number;
-  innerRadius?: number;
-  outerRadius?: number;
-  percent?: number;
-  name?: string;
-}) {
-  if (
-    cx === undefined ||
-    cy === undefined ||
-    midAngle === undefined ||
-    innerRadius === undefined ||
-    outerRadius === undefined ||
-    percent === undefined ||
-    !name
-  ) {
-    return null;
-  }
-
-  // Hide tiny slices to avoid clutter; legend still lists every category.
-  if (percent < 0.08) {
-    return null;
-  }
-
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-  const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-
-  return (
-    <text
-      x={x}
-      y={y}
-      fill="var(--chart-label)"
-      textAnchor="middle"
-      dominantBaseline="central"
-      className="allocation-chart__slice-label"
-    >
-      {formatSharePercent(percent * 100)}
-    </text>
-  );
-}
-
 export function AllocationChart({ data, currency }: AllocationChartProps) {
   const slices = data.latestAllocation
     .filter((item) => item.amountCents > 0)
@@ -131,8 +79,6 @@ export function AllocationChart({ data, currency }: AllocationChartProps) {
                   paddingAngle={2}
                   stroke="var(--card)"
                   strokeWidth={2}
-                  label={AllocationLabel}
-                  labelLine={false}
                 />
                 <Tooltip content={<AllocationTooltip currency={currency} />} />
                 <text

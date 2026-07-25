@@ -25,7 +25,8 @@ export function createHealthRouter(db: Database.Database): Router {
         database: 'ok',
         version,
       });
-    } catch {
+    } catch (error) {
+      console.error('Health check database query failed', error);
       res.status(503).json({
         status: 'error',
         database: 'unavailable',

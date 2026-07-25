@@ -16,7 +16,7 @@ export function EmptyState({ onAddSnapshot }: EmptyStateProps) {
         No snapshots yet
       </h2>
       <p className="empty-state__message">
-        Worthlog tracks the total EUR value of each investment category by date —
+        Worthlog tracks the total value of each investment category by date —
         not individual assets or trades. Add your first snapshot to unlock the
         portfolio chart, allocation breakdown, and history table.
       </p>

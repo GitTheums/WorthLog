@@ -22,7 +22,6 @@
   --overlay: rgba(18, 23, 34, 0.4);
   --chart-grid: #dce2eb;
   --chart-axis: #5f6b7c;
-  --chart-label: #ffffff;
   --radius-card: 18px;
   --radius-control: 12px;
   --header-height: 72px;
@@ -61,7 +60,6 @@
   --overlay: rgba(0, 0, 0, 0.55);
   --chart-grid: #2d3645;
   --chart-axis: #b4bccc;
-  --chart-label: #0b0f14;
 }
 
 *,

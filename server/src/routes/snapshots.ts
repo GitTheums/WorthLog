@@ -100,10 +100,21 @@ export function createSnapshotsRouter(db: Database.Database): Router {
       }
 
       const existing = getSnapshotDetailsByDate(db, date);
+
+      // Preserve values for archived (or otherwise inactive) categories so
+      // editing active amounts cannot erase historical archive data.
+      const preservedInactiveValues =
+        existing?.values
+          .filter((value) => !activeIds.has(value.categoryId))
+          .map((value) => ({
+            categoryId: value.categoryId,
+            amountCents: value.amountCents,
+          })) ?? [];
+
       const snapshot = upsertSnapshot(db, {
         date,
         note: body.note ?? null,
-        values: body.values,
+        values: [...body.values, ...preservedInactiveValues],
       });
 
       sendData(res, snapshot, existing ? 200 : 201);

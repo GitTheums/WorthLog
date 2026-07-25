@@ -295,7 +295,7 @@ describe('SQLite database layer', () => {
         date: '2026-05-02',
         values: [{ categoryId: crypto.id, amountCents: 12.34 }],
       }),
-    ).toThrow(/non-negative integer/i);
+    ).toThrow(/non-negative safe integer/i);
   });
 
   it('stores and updates settings', () => {

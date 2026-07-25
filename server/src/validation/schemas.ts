@@ -16,11 +16,42 @@ export const iconSchema = z
   .min(1, 'icon is required')
   .max(100, 'icon must be at most 100 characters');
 
+function isValidCalendarDate(value: string): boolean {
+  const [yearText, monthText, dayText] = value.split('-');
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day)
+  ) {
+    return false;
+  }
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
 export const isoDateSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD');
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD')
+  .refine(isValidCalendarDate, 'date must be a valid calendar date');
 
 export const dashboardRangeSchema = z.enum(['1m', '3m', '1y', 'all']);
+
+export const amountCentsSchema = z
+  .number()
+  .int()
+  .nonnegative()
+  .max(
+    Number.MAX_SAFE_INTEGER,
+    'amountCents must be at most Number.MAX_SAFE_INTEGER',
+  );
 
 export const createCategoryBodySchema = z.object({
   name: categoryNameSchema,
@@ -47,7 +78,7 @@ export const reorderCategoriesBodySchema = z.object({
 
 export const snapshotValueSchema = z.object({
   categoryId: z.uuid(),
-  amountCents: z.number().int().nonnegative(),
+  amountCents: amountCentsSchema,
 });
 
 export const putSnapshotBodySchema = z.object({
@@ -75,7 +106,7 @@ export const backupValueSchema = z.object({
   id: z.uuid(),
   snapshotId: z.uuid(),
   categoryId: z.uuid(),
-  amountCents: z.number().int().nonnegative(),
+  amountCents: amountCentsSchema,
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 });
@@ -83,7 +114,7 @@ export const backupValueSchema = z.object({
 export const backupSnapshotSchema = z.object({
   id: z.uuid(),
   date: isoDateSchema,
-  note: z.string().nullable(),
+  note: z.string().max(2000).nullable(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
   values: z.array(backupValueSchema),
