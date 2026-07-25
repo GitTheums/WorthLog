@@ -28,7 +28,12 @@ describe('parseMoneyInput', () => {
     expect(parseMoneyInput('0.00')).toEqual({ ok: true, cents: 0 });
   });
 
-  it('rejects negative values and empty input', () => {
+  it('treats empty input as zero cents', () => {
+    expect(parseMoneyInput('')).toEqual({ ok: true, cents: 0 });
+    expect(parseMoneyInput('   ')).toEqual({ ok: true, cents: 0 });
+  });
+
+  it('rejects negative values and invalid text', () => {
     expect(parseMoneyInput('-1')).toEqual({
       ok: false,
       error: 'Value cannot be negative',
@@ -37,13 +42,10 @@ describe('parseMoneyInput', () => {
       ok: false,
       error: 'Value cannot be negative',
     });
-    expect(parseMoneyInput('')).toEqual({
+    expect(parseMoneyInput('abc')).toEqual({
       ok: false,
-      error: 'Enter a value',
-    });
-    expect(parseMoneyInput('   ')).toEqual({
-      ok: false,
-      error: 'Enter a value',
+      error: 'Enter a valid amount',
     });
   });
 });
+

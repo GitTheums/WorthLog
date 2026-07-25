@@ -169,6 +169,12 @@
   font-size: 0.84rem;
 }
 
+.snapshot-modal__hint {
+  margin: 0 0 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
 .snapshot-modal__warning {
   margin: 0;
   padding: 0.7rem 0.85rem;

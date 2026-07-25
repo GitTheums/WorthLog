@@ -21,6 +21,7 @@ import { useDashboard } from './hooks/useDashboard';
 import { useSettings } from './hooks/useSettings';
 import { useTheme } from './hooks/useTheme';
 import { formatMoney, formatSnapshotDate } from './lib/format';
+import { createClientId } from './lib/id';
 import './Dashboard.css';
 
 interface DeleteTarget {
@@ -104,7 +105,7 @@ export function Dashboard() {
     try {
       await deleteSnapshot(deleteTarget.date);
       setToast({
-        id: crypto.randomUUID(),
+        id: createClientId(),
         tone: 'success',
         message: `Snapshot for ${formatSnapshotDate(deleteTarget.date)} deleted`,
       });
@@ -118,7 +119,7 @@ export function Dashboard() {
             ? caught.message
             : 'Could not delete snapshot';
       setToast({
-        id: crypto.randomUUID(),
+        id: createClientId(),
         tone: 'error',
         message,
       });
@@ -219,7 +220,7 @@ export function Dashboard() {
         }}
         onSaved={(message) => {
           setToast({
-            id: crypto.randomUUID(),
+            id: createClientId(),
             tone: 'success',
             message,
           });
@@ -260,7 +261,7 @@ export function Dashboard() {
           }}
           onToast={(tone, message) => {
             setToast({
-              id: crypto.randomUUID(),
+              id: createClientId(),
               tone,
               message,
             });

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../App';
 import {
   dashboardFixture,
@@ -20,7 +20,11 @@ describe('snapshot workflow', () => {
     document.documentElement.dataset['theme'] = 'light';
   });
 
-  it('requires a value for every active category and rejects negatives', async () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('rejects negatives and invalid text without requiring every category', async () => {
     mockApi({ dashboard: emptyDashboardFixture, snapshotsByDate: {} });
     const user = userEvent.setup();
 
@@ -30,24 +34,106 @@ describe('snapshot workflow', () => {
     const dialog = await openAddModal(user);
     await within(dialog).findByLabelText('Crypto');
 
-    await user.clear(within(dialog).getByLabelText('Crypto'));
+    expect(
+      within(dialog).getByText(
+        'Leave empty if you do not own anything in this category.',
+      ),
+    ).toBeInTheDocument();
+
     await user.type(within(dialog).getByLabelText('Crypto'), '-1');
-    await user.type(within(dialog).getByLabelText('Stocks'), '10');
-    await user.type(within(dialog).getByLabelText('Pokémon'), '10');
-    // Leave CS2 Skins empty
+    await user.type(within(dialog).getByLabelText('Stocks'), 'abc');
 
     await user.click(
       within(dialog).getByRole('button', { name: 'Save snapshot' }),
     );
 
-    expect(await within(dialog).findByText('Value cannot be negative')).toBeInTheDocument();
-    expect(within(dialog).getByText('Enter a value')).toBeInTheDocument();
     expect(
-      within(dialog).getByText('Please fix the highlighted fields'),
+      await within(dialog).findByText('Value cannot be negative'),
     ).toBeInTheDocument();
+    expect(within(dialog).getByText('Enter a valid amount')).toBeInTheDocument();
+    expect(
+      within(dialog).queryByText('Enter a value'),
+    ).not.toBeInTheDocument();
   });
 
-  it('accepts zero values and decimal comma input when saving a new snapshot', async () => {
+  it('saves all-empty category inputs as amountCents 0', async () => {
+    const putCalls: Array<{ date: string; body: unknown }> = [];
+    mockApi({
+      dashboard: emptyDashboardFixture,
+      snapshotsByDate: {},
+      onPut: (date, body) => {
+        putCalls.push({ date, body });
+      },
+    });
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByRole('heading', { name: 'No snapshots yet' });
+
+    const dialog = await openAddModal(user);
+    await within(dialog).findByLabelText('Crypto');
+
+    expect(within(dialog).getByLabelText('Crypto')).toHaveValue('');
+    expect(within(dialog).getByLabelText('Stocks')).toHaveValue('');
+    expect(within(dialog).getByText('€0.00')).toBeInTheDocument();
+
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Save snapshot' }),
+    );
+
+    await waitFor(() => {
+      expect(putCalls).toHaveLength(1);
+    });
+
+    expect(putCalls[0]?.body).toMatchObject({
+      values: expect.arrayContaining([
+        { categoryId: 'cat-crypto', amountCents: 0 },
+        { categoryId: 'cat-stocks', amountCents: 0 },
+        { categoryId: 'cat-pokemon', amountCents: 0 },
+        { categoryId: 'cat-skins', amountCents: 0 },
+      ]),
+    });
+  });
+
+  it('saves one filled category and empty others as zeros', async () => {
+    const putCalls: Array<{ date: string; body: unknown }> = [];
+    mockApi({
+      dashboard: emptyDashboardFixture,
+      snapshotsByDate: {},
+      onPut: (date, body) => {
+        putCalls.push({ date, body });
+      },
+    });
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByRole('heading', { name: 'No snapshots yet' });
+
+    const dialog = await openAddModal(user);
+    await within(dialog).findByLabelText('Crypto');
+    await user.type(within(dialog).getByLabelText('Crypto'), '25');
+
+    expect(within(dialog).getByText('€25.00')).toBeInTheDocument();
+
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Save snapshot' }),
+    );
+
+    await waitFor(() => {
+      expect(putCalls).toHaveLength(1);
+    });
+
+    expect(putCalls[0]?.body).toMatchObject({
+      values: expect.arrayContaining([
+        { categoryId: 'cat-crypto', amountCents: 2500 },
+        { categoryId: 'cat-stocks', amountCents: 0 },
+        { categoryId: 'cat-pokemon', amountCents: 0 },
+        { categoryId: 'cat-skins', amountCents: 0 },
+      ]),
+    });
+  });
+
+  it('accepts explicit zero, comma decimals, and dot decimals', async () => {
     const putCalls: Array<{ date: string; body: unknown }> = [];
     mockApi({
       dashboard: emptyDashboardFixture,
@@ -91,6 +177,48 @@ describe('snapshot workflow', () => {
     ).toBeInTheDocument();
   });
 
+  it('creates a first snapshot when crypto.randomUUID is unavailable', async () => {
+    vi.stubGlobal('crypto', {
+      getRandomValues: globalThis.crypto.getRandomValues.bind(globalThis.crypto),
+    });
+
+    const putCalls: Array<{ date: string; body: unknown }> = [];
+    mockApi({
+      dashboard: emptyDashboardFixture,
+      snapshotsByDate: {},
+      onPut: (date, body) => {
+        putCalls.push({ date, body });
+      },
+    });
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByRole('heading', { name: 'No snapshots yet' });
+
+    const dialog = await openAddModal(user);
+    await within(dialog).findByLabelText('Crypto');
+    await user.type(within(dialog).getByLabelText('Crypto'), '10');
+
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Save snapshot' }),
+    );
+
+    await waitFor(() => {
+      expect(putCalls).toHaveLength(1);
+    });
+
+    expect(putCalls[0]?.body).toMatchObject({
+      values: expect.arrayContaining([
+        { categoryId: 'cat-crypto', amountCents: 1000 },
+        { categoryId: 'cat-stocks', amountCents: 0 },
+      ]),
+    });
+    expect(typeof globalThis.crypto.randomUUID).not.toBe('function');
+    expect(
+      await screen.findByText(/Snapshot for .+ saved/i),
+    ).toBeInTheDocument();
+  });
+
   it('confirms before replacing a duplicate date', async () => {
     const putCalls: Array<{ date: string; body: unknown }> = [];
     mockApi({
@@ -116,7 +244,6 @@ describe('snapshot workflow', () => {
       ).toBeInTheDocument();
     });
 
-    // Prefill from latest values — overwrite with new numbers
     const crypto = within(dialog).getByLabelText('Crypto');
     await user.clear(crypto);
     await user.type(crypto, '10');
@@ -146,9 +273,48 @@ describe('snapshot workflow', () => {
     });
   });
 
-  it('loads an existing snapshot in edit mode and saves through PUT', async () => {
+  it('loads an existing snapshot in edit mode, shows zeros, and allows clearing', async () => {
     const putCalls: Array<{ date: string; body: unknown }> = [];
     mockApi({
+      snapshotsByDate: {
+        '2026-03-01': {
+          ...snapshotFixture,
+          values: [
+            {
+              id: 'val-1',
+              snapshotId: 'snap-1',
+              categoryId: 'cat-crypto',
+              amountCents: 3000,
+              createdAt: snapshotFixture.createdAt,
+              updatedAt: snapshotFixture.updatedAt,
+            },
+            {
+              id: 'val-2',
+              snapshotId: 'snap-1',
+              categoryId: 'cat-stocks',
+              amountCents: 0,
+              createdAt: snapshotFixture.createdAt,
+              updatedAt: snapshotFixture.updatedAt,
+            },
+            {
+              id: 'val-3',
+              snapshotId: 'snap-1',
+              categoryId: 'cat-pokemon',
+              amountCents: 3000,
+              createdAt: snapshotFixture.createdAt,
+              updatedAt: snapshotFixture.updatedAt,
+            },
+            {
+              id: 'val-4',
+              snapshotId: 'snap-1',
+              categoryId: 'cat-skins',
+              amountCents: 3000,
+              createdAt: snapshotFixture.createdAt,
+              updatedAt: snapshotFixture.updatedAt,
+            },
+          ],
+        },
+      },
       onPut: (date, body) => {
         putCalls.push({ date, body });
       },
@@ -168,13 +334,10 @@ describe('snapshot workflow', () => {
     await user.click(editButton);
 
     const dialog = await screen.findByRole('dialog', { name: 'Edit snapshot' });
-    expect(
-      within(dialog).getByText(/Editing values for/i),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Stocks')).toHaveValue('0.00');
 
-    const dateInput = within(dialog).getByLabelText('Snapshot date');
-    expect(dateInput).toBeDisabled();
-    expect(dateInput).toHaveValue('2026-03-01');
+    await user.clear(within(dialog).getByLabelText('Stocks'));
+    expect(within(dialog).getByLabelText('Stocks')).toHaveValue('');
 
     const crypto = within(dialog).getByLabelText('Crypto');
     await user.clear(crypto);
@@ -192,6 +355,7 @@ describe('snapshot workflow', () => {
     expect(putCalls[0]?.body).toMatchObject({
       values: expect.arrayContaining([
         { categoryId: 'cat-crypto', amountCents: 9999 },
+        { categoryId: 'cat-stocks', amountCents: 0 },
       ]),
     });
   });

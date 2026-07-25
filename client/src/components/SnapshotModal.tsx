@@ -414,11 +414,20 @@ export function SnapshotModal({
 
               <fieldset className="snapshot-modal__categories" disabled={saving}>
                 <legend>Category values</legend>
+                <p id="category-values-hint" className="snapshot-modal__hint">
+                  Leave empty if you do not own anything in this category.
+                </p>
                 <div className="snapshot-modal__category-list">
                   {categories.map((category) => {
                     const inputId = `category-${category.id}`;
                     const Icon = getCategoryIcon(category.icon);
                     const error = fieldErrors[category.id];
+                    const describedBy = [
+                      'category-values-hint',
+                      error ? `${inputId}-error` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' ');
 
                     return (
                       <div key={category.id} className="snapshot-modal__category">
@@ -463,9 +472,7 @@ export function SnapshotModal({
                               });
                             }}
                             aria-invalid={Boolean(error)}
-                            aria-describedby={
-                              error ? `${inputId}-error` : undefined
-                            }
+                            aria-describedby={describedBy}
                             placeholder="0.00"
                           />
                         </div>

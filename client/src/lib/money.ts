@@ -21,8 +21,9 @@ function isDigits(value: string): boolean {
 export function parseMoneyInput(raw: string): ParseMoneyResult {
   const trimmed = raw.trim().replace(/\s/g, '');
 
+  // Empty input means the user does not own anything in this category.
   if (trimmed.length === 0) {
-    return { ok: false, error: 'Enter a value' };
+    return { ok: true, cents: 0 };
   }
 
   if (trimmed.startsWith('-') || trimmed.includes('-')) {
