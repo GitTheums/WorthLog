@@ -6,6 +6,8 @@ const envSchema = z.object({
     .enum(['development', 'test', 'production'])
     .default('development'),
   DATA_DIR: z.string().min(1).default('./data'),
+  /** Optional absolute/relative path to the built client (`client/dist`). */
+  CLIENT_DIST_DIR: z.string().min(1).optional(),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;

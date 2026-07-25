@@ -5,8 +5,9 @@
 
 # Dependencies (reinstalled in image)
 node_modules
+**/node_modules
 
-# Build artifacts
+# Build artifacts (rebuilt in image)
 **/dist
 **/coverage
 *.tsbuildinfo
@@ -16,28 +17,32 @@ node_modules
 .env.*
 !.env.example
 
-# Local data
+# Local persistent data (bind-mounted at runtime)
 data
 *.db
 *.db-journal
 *.db-shm
 *.db-wal
 
-# Editor / OS
+# Editor / OS / tooling
 .cursor
 .idea
 .vscode
 .DS_Store
 Thumbs.db
-
-# Docs and tests (not needed in runtime image)
-*.md
-!README.md
-**/src/**/*.test.ts
-**/src/**/*.test.tsx
-**/tests
-
-# Logs
-logs
+agent-transcripts
+tmp-*
 *.log
 npm-debug.log*
+logs
+
+# Tests and docs not needed for the image build
+**/*.test.ts
+**/*.test.tsx
+**/src/test
+**/src/tests
+*.md
+!README.md
+
+# Docker compose override noise
+docker-compose.override.yml

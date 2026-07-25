@@ -1,0 +1,27 @@
+services:
+  worthlog:
+    container_name: worthlog
+    build: .
+    ports:
+      - '8787:3000'
+    volumes:
+      - ./data:/app/data
+    environment:
+      TZ: Europe/Amsterdam
+      DATA_DIR: /app/data
+      PORT: '3000'
+      NODE_ENV: production
+      CLIENT_DIST_DIR: /app/client/dist
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
