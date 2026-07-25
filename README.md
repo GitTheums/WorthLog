@@ -18,7 +18,7 @@ A simple self-hosted app for manually logging investment category totals and wat
 <!-- Maintainer: place the primary dashboard screenshot at docs/screenshots/worthlog-dashboard.png -->
 <div align="center">
   <img
-    src="docs/screenshots/worthlog-dashboard.png"
+    src="docs/screenshots/worthlog-banner.png"
     alt="Worthlog dashboard showing portfolio value, allocation, and history"
     width="900"
   />
@@ -53,21 +53,21 @@ Worthlog is deliberately **not** a live portfolio tracker, broker integration, t
 
 ## Screenshots
 
-The main dashboard screenshot is shown at the top of this README.
-
-<!--
-  Optional dark-mode screenshot.
-  Place the file at: docs/screenshots/worthlog-dark-mode.png
-  Then uncomment the block below.
-
 <div align="center">
   <img
-    src="docs/screenshots/worthlog-dark-mode.png"
-    alt="Worthlog dashboard in dark mode"
+    src="docs/screenshots/worthlog-dashboard.png"
+    alt="Worthlog dashboard showing portfolio value, allocation, and history"
     width="900"
   />
 </div>
--->
+
+<div align="center">
+  <img
+    src="docs/screenshots/worthlog-dashboard-white.png"
+    alt="Worthlog dashboard showing portfolio value, allocation, and history"
+    width="900"
+  />
+</div>
 
 ## Quick Start with Docker Compose
 
