@@ -1,0 +1,43 @@
+# Git / VCS
+.git
+.gitignore
+.gitattributes
+
+# Dependencies (reinstalled in image)
+node_modules
+
+# Build artifacts
+**/dist
+**/coverage
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local data
+data
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Editor / OS
+.cursor
+.idea
+.vscode
+.DS_Store
+Thumbs.db
+
+# Docs and tests (not needed in runtime image)
+*.md
+!README.md
+**/src/**/*.test.ts
+**/src/**/*.test.tsx
+**/tests
+
+# Logs
+logs
+*.log
+npm-debug.log*

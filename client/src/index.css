@@ -1,0 +1,44 @@
+:root {
+  color-scheme: light dark;
+
+  --color-bg: #f3f0e8;
+  --color-fg: #1c1a16;
+  --color-muted: #5c574e;
+  --color-accent: #0f5c4c;
+  --color-surface: rgba(255, 255, 255, 0.55);
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-body: "Segoe UI", Candara, "Helvetica Neue", sans-serif;
+  --space: clamp(1.25rem, 2vw, 2rem);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #141311;
+    --color-fg: #f2eee4;
+    --color-muted: #b7b0a3;
+    --color-accent: #6fbfa8;
+    --color-surface: rgba(30, 28, 24, 0.7);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-fg);
+  background:
+    radial-gradient(circle at top left, rgba(15, 92, 76, 0.16), transparent 40%),
+    radial-gradient(circle at bottom right, rgba(120, 90, 40, 0.12), transparent 45%),
+    var(--color-bg);
+}
