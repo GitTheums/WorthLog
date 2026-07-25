@@ -1,0 +1,10 @@
+export { openDatabase, getDatabasePath } from './open-database.js';
+export { runMigrations } from './migrate.js';
+export type { Migration } from './migrate.js';
+export { migrations } from './migrations/index.js';
+export { seedDefaultCategories } from './seed.js';
+export * from './errors.js';
+export * from './types.js';
+export * from './repositories/categories.js';
+export * from './repositories/snapshots.js';
+export * from './repositories/settings.js';

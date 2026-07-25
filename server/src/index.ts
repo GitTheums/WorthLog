@@ -1,9 +1,13 @@
 import { createApp } from './app.js';
 import { loadConfig } from './config.js';
+import { openDatabase } from './db/index.js';
 
 const config = loadConfig();
-const app = createApp();
+const db = openDatabase(config.DATA_DIR);
+const app = createApp(db);
 
 app.listen(config.PORT, () => {
-  console.log(`WorthLog API listening on http://localhost:${String(config.PORT)}`);
+  console.log(
+    `WorthLog API listening on http://localhost:${String(config.PORT)}`,
+  );
 });

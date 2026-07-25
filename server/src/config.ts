@@ -5,7 +5,7 @@ const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
     .default('development'),
-  DATABASE_PATH: z.string().min(1).default('./data/worthlog.db'),
+  DATA_DIR: z.string().min(1).default('./data'),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;

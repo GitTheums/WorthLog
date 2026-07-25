@@ -7,12 +7,16 @@ describe('loadConfig', () => {
 
     expect(config.PORT).toBe(3001);
     expect(config.NODE_ENV).toBe('development');
-    expect(config.DATABASE_PATH).toBe('./data/worthlog.db');
+    expect(config.DATA_DIR).toBe('./data');
   });
 
-  it('reads PORT from the environment', () => {
-    const config = loadConfig({ PORT: '4000' });
+  it('reads PORT and DATA_DIR from the environment', () => {
+    const config = loadConfig({
+      PORT: '4000',
+      DATA_DIR: '/var/lib/worthlog',
+    });
 
     expect(config.PORT).toBe(4000);
+    expect(config.DATA_DIR).toBe('/var/lib/worthlog');
   });
 });

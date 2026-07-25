@@ -64,11 +64,11 @@ See [`.env.example`](.env.example).
 | --- | --- | --- |
 | `PORT` | `3001` | Backend HTTP port |
 | `NODE_ENV` | `development` | Runtime environment |
-| `DATABASE_PATH` | `./data/worthlog.db` | SQLite database file path |
+| `DATA_DIR` | `./data` | Persistent data directory; database file is `${DATA_DIR}/worthlog.db` |
 
 ## Health check
 
-`GET /api/health` returns application status, a database state placeholder, and the application version.
+`GET /api/health` runs a small database query and returns application `status`, `database` state, and `version`.
 
 ## License
 
