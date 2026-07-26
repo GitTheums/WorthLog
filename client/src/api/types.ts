@@ -1,5 +1,11 @@
 export type DashboardRange = '1m' | '3m' | '1y' | 'all';
 
+export interface AuthStatus {
+  pinEnabled: boolean;
+  unlocked: boolean;
+  sessionExpiresAt: string | null;
+}
+
 export interface AppSettings {
   currency: string;
   defaultRange: DashboardRange;

@@ -49,9 +49,10 @@ import {
 } from '../../lib/icons';
 import { CategoryDeleteDialog } from '../CategoryDeleteDialog';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { SecuritySettings } from './SecuritySettings';
 import './SettingsDialog.css';
 
-export type SettingsTab = 'categories' | 'general' | 'backup';
+export type SettingsTab = 'categories' | 'general' | 'security' | 'backup';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -61,6 +62,7 @@ interface SettingsDialogProps {
   onClose: () => void;
   onToast: (tone: 'success' | 'error', message: string) => void;
   onDataChanged: () => void;
+  onLockNow: () => void;
 }
 
 interface CategoryDraft {
@@ -90,6 +92,7 @@ export function SettingsDialog({
   onClose,
   onToast,
   onDataChanged,
+  onLockNow,
 }: SettingsDialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -521,7 +524,7 @@ export function SettingsDialog({
                 Settings
               </h2>
               <p id={descriptionId} className="settings-dialog__subtitle">
-                Manage categories, preferences, and backups
+                Manage categories, security, preferences, and backups
               </p>
             </div>
             <button
@@ -538,6 +541,7 @@ export function SettingsDialog({
               [
                 ['categories', 'Categories'],
                 ['general', 'General'],
+                ['security', 'Security'],
                 ['backup', 'Backup and restore'],
               ] as const
             ).map(([value, label]) => (
@@ -891,9 +895,9 @@ export function SettingsDialog({
             {tab === 'general' ? (
               <section className="settings-section" aria-label="General">
                 <p className="settings-section__intro">
-                  Worthlog has no login and is intended for a trusted local network
-                  or personal machine. Anyone who can reach the app can view and
-                  change your data.
+                  Display preferences for this portfolio. For access control, use
+                  the Security tab. Worthlog is still intended for a trusted local
+                  network or personal machine.
                 </p>
                 <form
                   className="settings-card settings-form"
@@ -955,18 +959,29 @@ export function SettingsDialog({
               </section>
             ) : null}
 
+            {tab === 'security' ? (
+              <SecuritySettings
+                onToast={onToast}
+                onLockNow={onLockNow}
+                onCloseSettings={onClose}
+              />
+            ) : null}
+
             {tab === 'backup' ? (
               <section className="settings-section" aria-label="Backup and restore">
                 <p className="settings-section__intro">
                   Export a portable JSON backup, or restore from a previous export.
-                  Before import, the server automatically creates a timestamped
-                  SQLite database backup in your data directory.
+                  JSON backups exclude PIN credentials. Restoring a JSON backup does
+                  not change your current PIN. Direct SQLite file copies include PIN
+                  configuration. Before import, the server automatically creates a
+                  timestamped SQLite database backup in your data directory.
                 </p>
 
                 <div className="settings-card">
                   <h3 className="settings-card__title">Export backup</h3>
                   <p className="settings-muted">
                     Downloads settings, categories, snapshots, and values as JSON.
+                    PIN hash and salt are not included.
                   </p>
                   <div className="settings-backup-actions">
                     <button

@@ -44,6 +44,23 @@ export const isoDateSchema = z
 
 export const dashboardRangeSchema = z.enum(['1m', '3m', '1y', 'all']);
 
+export const pinSchema = z
+  .string()
+  .regex(/^\d{4,8}$/, 'PIN must be 4 to 8 numeric digits');
+
+export const pinBodySchema = z.object({
+  pin: pinSchema,
+});
+
+export const changePinBodySchema = z.object({
+  currentPin: pinSchema,
+  newPin: pinSchema,
+});
+
+export const removePinBodySchema = z.object({
+  currentPin: pinSchema,
+});
+
 export const amountCentsSchema = z
   .number()
   .int()

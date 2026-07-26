@@ -21,6 +21,7 @@ import { PrivacyValue } from './components/PrivacyValue';
 import { SummaryCards } from './components/SummaryCards';
 import { Toast, type ToastMessage } from './components/Toast';
 import { TotalValueChart } from './components/TotalValueChart';
+import { useAuth } from './auth/AuthContext';
 import { useDashboard } from './hooks/useDashboard';
 import { useSettings } from './hooks/useSettings';
 import { useTheme } from './hooks/useTheme';
@@ -38,6 +39,7 @@ export function Dashboard() {
   const { theme, toggleTheme } = useTheme();
   const { hidden: privacyHidden, toggle: togglePrivacy } =
     usePrivacyModeContext();
+  const { pinEnabled, lock } = useAuth();
   const {
     settings,
     loading: settingsLoading,
@@ -52,12 +54,39 @@ export function Dashboard() {
   const [editDate, setEditDate] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [locking, setLocking] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [categoriesRevision, setCategoriesRevision] = useState(0);
   const [activeCategoryCount, setActiveCategoryCount] = useState<number | null>(
     null,
   );
   const restoreFocusRef = useRef<HTMLElement | null>(null);
+
+  const handleLock = async () => {
+    if (locking) {
+      return;
+    }
+    setLocking(true);
+    try {
+      setSettingsDialogOpen(false);
+      setSnapshotOpen(false);
+      await lock();
+    } catch (caught) {
+      const message =
+        caught instanceof ApiError
+          ? caught.message
+          : caught instanceof Error
+            ? caught.message
+            : 'Could not lock WorthLog';
+      setToast({
+        id: createClientId(),
+        tone: 'error',
+        message,
+      });
+    } finally {
+      setLocking(false);
+    }
+  };
 
   useEffect(() => {
     if (settings && range === null) {
@@ -242,8 +271,12 @@ export function Dashboard() {
         <Header
           theme={theme}
           privacyHidden={privacyHidden}
+          showLockButton={pinEnabled}
           onToggleTheme={toggleTheme}
           onTogglePrivacy={togglePrivacy}
+          onLock={() => {
+            void handleLock();
+          }}
           onAddSnapshot={() => {
             const active = document.activeElement;
             openAddSnapshot(
@@ -334,6 +367,9 @@ export function Dashboard() {
             });
           }}
           onDataChanged={refreshAppData}
+          onLockNow={() => {
+            void handleLock();
+          }}
         />
       ) : null}
 

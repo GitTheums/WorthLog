@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Moon, Plus, Settings, Sun } from 'lucide-react';
+import { Eye, EyeOff, Lock, Moon, Plus, Settings, Sun } from 'lucide-react';
 import type { Theme } from '../hooks/useTheme';
 import { BrandMark } from './BrandMark';
 import './Header.css';
@@ -6,8 +6,10 @@ import './Header.css';
 interface HeaderProps {
   theme: Theme;
   privacyHidden: boolean;
+  showLockButton?: boolean;
   onToggleTheme: () => void;
   onTogglePrivacy: () => void;
+  onLock?: () => void;
   onAddSnapshot: () => void;
   onOpenSettings: () => void;
 }
@@ -15,8 +17,10 @@ interface HeaderProps {
 export function Header({
   theme,
   privacyHidden,
+  showLockButton = false,
   onToggleTheme,
   onTogglePrivacy,
+  onLock,
   onAddSnapshot,
   onOpenSettings,
 }: HeaderProps) {
@@ -59,6 +63,18 @@ export function Header({
             <Eye size={18} strokeWidth={1.8} aria-hidden="true" />
           )}
         </button>
+
+        {showLockButton ? (
+          <button
+            type="button"
+            className="app-header__icon-button"
+            onClick={onLock}
+            aria-label="Lock WorthLog"
+            title="Lock WorthLog"
+          >
+            <Lock size={18} strokeWidth={1.8} aria-hidden="true" />
+          </button>
+        ) : null}
 
         <button
           type="button"

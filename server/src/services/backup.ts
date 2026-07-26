@@ -12,6 +12,10 @@ import {
 import type { BackupExport } from '../validation/schemas.js';
 import { backupExportSchema } from '../validation/schemas.js';
 
+/**
+ * Portfolio JSON export intentionally excludes `security_settings`
+ * (PIN hash/salt/kdf). Direct SQLite file copies include PIN configuration.
+ */
 export function exportBackup(db: Database.Database): BackupExport {
   const categories = listCategories(db, { includeArchived: true });
   const settings = listSettings(db);
@@ -84,6 +88,8 @@ export function importBackup(
   const parsed = backupExportSchema.parse(payload);
   const backupPath = createTimestampedBackupFile(dataDir, db);
 
+  // Import replaces portfolio tables only. `security_settings` is never
+  // cleared or overwritten, so the current PIN configuration is preserved.
   const run = db.transaction((data: BackupExport) => {
     db.prepare('DELETE FROM snapshot_values').run();
     db.prepare('DELETE FROM snapshots').run();

@@ -33,7 +33,7 @@ Nothing is pulled from brokers or market data providers. Values are entered by y
 The application runs locally, typically through Docker Compose, with all data kept in a SQLite database on your machine. There are no accounts and no external financial APIs.
 
 > [!IMPORTANT]
-> **Worthlog has no built-in authentication.** Anyone who can reach the app can view and change all data. Run it only on a trusted local network or personal machine. Do not expose it directly to the public internet. For remote access, use a VPN or an authenticated reverse proxy.
+> Worthlog is intended for a **trusted local network** or personal machine. An optional PIN can restrict access through the web UI and API, but it does **not** encrypt the SQLite database. Do not expose Worthlog directly to the public internet. For remote access, use **HTTPS**, a **VPN**, or an authenticated reverse proxy.
 
 ## Features
 
@@ -44,10 +44,10 @@ The application runs locally, typically through Docker Compose, with all data ke
 | **Dashboard** | Total value history, category allocation, and per-category cards |
 | **Ranges** | Filter charts and history by 1M, 3M, 1Y, or All |
 | **Appearance** | Light and dark themes |
-| **Settings** | Display currency and default dashboard range |
+| **Settings** | Display currency, default dashboard range, and optional PIN |
 | **Backup** | JSON export and import from the UI |
 | **Storage** | Local SQLite database; single Docker container with a healthcheck |
-| **Access** | No account or login required |
+| **Access** | No user accounts; optional portfolio PIN lock |
 
 Worthlog is deliberately **not** a live portfolio tracker, broker integration, transaction ledger, or financial advice platform.
 
@@ -287,13 +287,25 @@ WorthLog/
 └── package.json          # npm workspaces root
 ```
 
+## Optional PIN Protection
+
+Worthlog can require a numeric PIN (4–8 digits) before portfolio data is available through the web UI and API.
+
+- **Optional and off by default.** Enable it in **Settings → Security**. Existing installations without a PIN keep working unchanged.
+- **Manual lock.** When a PIN is enabled, use **Lock WorthLog** in the header or **Lock now** in Settings. Refreshing an unlocked browser tab keeps the session for up to 12 hours.
+- **Not encryption.** The PIN restricts access through Worthlog’s HTTP API and UI. It does **not** encrypt `worthlog.db`. Anyone with filesystem or container volume access can still read the database.
+- **Network security still matters.** Plain HTTP does not protect the PIN from interception on untrusted networks. Prefer HTTPS, a VPN, or an authenticated reverse proxy for remote access. Do not expose Worthlog directly to the public internet.
+- **Backups.** Normal JSON portfolio exports exclude PIN hash and salt, and restoring a JSON backup does not replace or remove your current PIN. Direct SQLite file backups include the configured PIN hash.
+
+This is a single-portfolio local convenience lock, not a multi-user account system or internet-grade authentication.
+
 ## Security
 
-- Worthlog has **no built-in authentication**.
-- It is intended for a **trusted local network** or a personal machine.
+- Prefer a **trusted local network** or personal machine.
+- Use the optional PIN to reduce casual access; it is **not** a substitute for HTTPS, a VPN, or host filesystem permissions.
 - The database can contain **private financial information**.
 - Do **not** expose the app directly to the public internet.
-- For remote access, use a **VPN** or an **authenticated reverse proxy**. Worthlog itself does not provide reverse-proxy authentication.
+- For remote access, use **HTTPS**, a **VPN**, or an **authenticated reverse proxy**.
 
 ## Data and financial disclaimer
 

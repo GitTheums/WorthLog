@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import type {
   AppSettings,
+  AuthStatus,
   BackupExport,
   Category,
   CreateCategoryPayload,
@@ -95,6 +96,10 @@ interface MockApiOptions {
   settings?: AppSettings;
   categories?: Category[];
   snapshotsByDate?: Record<string, SnapshotDetails>;
+  authStatus?: AuthStatus;
+  /** When set, unlock/setup/change/remove use this PIN for validation. */
+  configuredPin?: string | null;
+  unlockFailuresBeforeBlock?: number;
   onPut?: (date: string, body: UpsertSnapshotPayload) => void;
   onDelete?: (date: string) => void;
   onCreateCategory?: (body: CreateCategoryPayload) => void;
@@ -104,9 +109,14 @@ interface MockApiOptions {
   onPatchSettings?: (body: Partial<AppSettings>) => void;
   onExportBackup?: () => void;
   onImportBackup?: (body: BackupExport) => void;
+  onAuthSetup?: (pin: string) => void;
+  onAuthUnlock?: (pin: string) => void;
+  onAuthLock?: () => void;
   deleteCategoryError?: { status: number; code: string; message: string };
   /** Resolves before a successful DELETE /api/categories/:id response. */
   awaitBeforeDelete?: () => Promise<void>;
+  /** Force protected routes to return PORTFOLIO_LOCKED after N successful calls. */
+  lockAfterProtectedCalls?: number;
 }
 
 export function mockApi(options: MockApiOptions = {}) {
@@ -120,10 +130,273 @@ export function mockApi(options: MockApiOptions = {}) {
   const snapshotsByDate = options.snapshotsByDate ?? {
     '2026-03-01': snapshotFixture,
   };
+  let authStatus: AuthStatus = {
+    pinEnabled: false,
+    unlocked: true,
+    sessionExpiresAt: null,
+    ...options.authStatus,
+  };
+  let configuredPin = options.configuredPin ?? null;
+  if (authStatus.pinEnabled && !configuredPin) {
+    configuredPin = '1234';
+  }
+  let unlockFailures = 0;
+  let protectedCalls = 0;
+  const unlockFailuresBeforeBlock = options.unlockFailuresBeforeBlock ?? 5;
 
   return vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
     const url = requestUrl(input);
     const method = (init?.method ?? 'GET').toUpperCase();
+
+    if (url.includes('/api/auth/status') && method === 'GET') {
+      return Promise.resolve(Response.json({ data: authStatus }));
+    }
+
+    if (url.includes('/api/auth/setup') && method === 'POST') {
+      const body = readJsonBody(init?.body) as { pin?: string };
+      const pin = body.pin ?? '';
+      options.onAuthSetup?.(pin);
+      if (authStatus.pinEnabled) {
+        return Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'PIN_ALREADY_SET',
+                message: 'A PIN is already configured.',
+              },
+            },
+            { status: 409 },
+          ),
+        );
+      }
+      if (!/^\d{4,8}$/.test(pin)) {
+        return Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'VALIDATION_ERROR',
+                message: 'PIN must be 4 to 8 numeric digits.',
+              },
+            },
+            { status: 400 },
+          ),
+        );
+      }
+      configuredPin = pin;
+      authStatus = {
+        pinEnabled: true,
+        unlocked: true,
+        sessionExpiresAt: '2099-01-01T00:00:00.000Z',
+      };
+      return Promise.resolve(Response.json({ data: authStatus }));
+    }
+
+    if (url.includes('/api/auth/unlock') && method === 'POST') {
+      const body = readJsonBody(init?.body) as { pin?: string };
+      const pin = body.pin ?? '';
+      options.onAuthUnlock?.(pin);
+      if (unlockFailures >= unlockFailuresBeforeBlock) {
+        return Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'TOO_MANY_ATTEMPTS',
+                message: 'Too many attempts. Try again later.',
+                details: { retryAfterSeconds: 30 },
+              },
+            },
+            { status: 429 },
+          ),
+        );
+      }
+      if (!authStatus.pinEnabled || pin !== configuredPin) {
+        unlockFailures += 1;
+        if (unlockFailures >= unlockFailuresBeforeBlock) {
+          return Promise.resolve(
+            Response.json(
+              {
+                error: {
+                  code: 'TOO_MANY_ATTEMPTS',
+                  message: 'Too many attempts. Try again later.',
+                  details: { retryAfterSeconds: 30 },
+                },
+              },
+              { status: 429 },
+            ),
+          );
+        }
+        return Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'INVALID_PIN',
+                message: 'That PIN is incorrect.',
+              },
+            },
+            { status: 401 },
+          ),
+        );
+      }
+      unlockFailures = 0;
+      authStatus = {
+        pinEnabled: true,
+        unlocked: true,
+        sessionExpiresAt: '2099-01-01T00:00:00.000Z',
+      };
+      return Promise.resolve(Response.json({ data: authStatus }));
+    }
+
+    if (url.includes('/api/auth/lock') && method === 'POST') {
+      options.onAuthLock?.();
+      if (authStatus.pinEnabled) {
+        authStatus = {
+          pinEnabled: true,
+          unlocked: false,
+          sessionExpiresAt: null,
+        };
+      }
+      return Promise.resolve(Response.json({ data: { locked: true } }));
+    }
+
+    if (url.includes('/api/auth/change-pin') && method === 'POST') {
+      const body = readJsonBody(init?.body) as {
+        currentPin?: string;
+        newPin?: string;
+      };
+      if (!authStatus.pinEnabled || !authStatus.unlocked) {
+        return Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'PORTFOLIO_LOCKED',
+                message: 'WorthLog is locked.',
+              },
+            },
+            { status: 401 },
+          ),
+        );
+      }
+      if (body.currentPin !== configuredPin) {
+        return Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'INVALID_PIN',
+                message: 'That PIN is incorrect.',
+              },
+            },
+            { status: 401 },
+          ),
+        );
+      }
+      if (!/^\d{4,8}$/.test(body.newPin ?? '')) {
+        return Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'VALIDATION_ERROR',
+                message: 'PIN must be 4 to 8 numeric digits.',
+              },
+            },
+            { status: 400 },
+          ),
+        );
+      }
+      configuredPin = body.newPin ?? null;
+      authStatus = {
+        pinEnabled: true,
+        unlocked: true,
+        sessionExpiresAt: '2099-01-01T00:00:00.000Z',
+      };
+      return Promise.resolve(Response.json({ data: authStatus }));
+    }
+
+    if (url.includes('/api/auth/pin') && method === 'DELETE') {
+      const body = readJsonBody(init?.body) as { currentPin?: string };
+      if (!authStatus.pinEnabled || !authStatus.unlocked) {
+        return Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'PORTFOLIO_LOCKED',
+                message: 'WorthLog is locked.',
+              },
+            },
+            { status: 401 },
+          ),
+        );
+      }
+      if (body.currentPin !== configuredPin) {
+        return Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'INVALID_PIN',
+                message: 'That PIN is incorrect.',
+              },
+            },
+            { status: 401 },
+          ),
+        );
+      }
+      configuredPin = null;
+      authStatus = {
+        pinEnabled: false,
+        unlocked: true,
+        sessionExpiresAt: null,
+      };
+      return Promise.resolve(Response.json({ data: authStatus }));
+    }
+
+    const isProtectedPortfolioRoute =
+      url.includes('/api/settings') ||
+      url.includes('/api/dashboard') ||
+      url.includes('/api/categories') ||
+      url.includes('/api/snapshots') ||
+      url.includes('/api/backup');
+
+    if (
+      isProtectedPortfolioRoute &&
+      authStatus.pinEnabled &&
+      !authStatus.unlocked
+    ) {
+      return Promise.resolve(
+        Response.json(
+          {
+            error: {
+              code: 'PORTFOLIO_LOCKED',
+              message: 'WorthLog is locked.',
+            },
+          },
+          { status: 401 },
+        ),
+      );
+    }
+
+    if (
+      isProtectedPortfolioRoute &&
+      options.lockAfterProtectedCalls !== undefined
+    ) {
+      protectedCalls += 1;
+      if (protectedCalls > options.lockAfterProtectedCalls) {
+        authStatus = {
+          pinEnabled: true,
+          unlocked: false,
+          sessionExpiresAt: null,
+        };
+        return Promise.resolve(
+          Response.json(
+            {
+              error: {
+                code: 'PORTFOLIO_LOCKED',
+                message: 'WorthLog is locked.',
+              },
+            },
+            { status: 401 },
+          ),
+        );
+      }
+    }
 
     if (url.includes('/api/settings')) {
       if (method === 'PATCH') {

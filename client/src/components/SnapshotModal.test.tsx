@@ -411,6 +411,17 @@ describe('snapshot workflow', () => {
             : input.url;
       const method = (init?.method ?? 'GET').toUpperCase();
 
+      if (url.includes('/api/auth/status')) {
+        return Promise.resolve(
+          Response.json({
+            data: {
+              pinEnabled: false,
+              unlocked: true,
+              sessionExpiresAt: null,
+            },
+          }),
+        );
+      }
       if (url.includes('/api/settings')) {
         return Promise.resolve(
           Response.json({

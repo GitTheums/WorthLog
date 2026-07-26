@@ -1,0 +1,132 @@
+.lock-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background:
+    radial-gradient(
+      1200px 600px at 20% -10%,
+      color-mix(in srgb, var(--accent) 14%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      900px 500px at 100% 0%,
+      color-mix(in srgb, var(--accent) 8%, transparent),
+      transparent 55%
+    ),
+    var(--bg);
+}
+
+.lock-screen__panel {
+  width: min(100%, 22rem);
+  padding: 1.75rem 1.5rem 1.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--card-raised);
+  box-shadow: var(--shadow);
+}
+
+.lock-screen__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.35rem;
+}
+
+.lock-screen__mark {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.lock-screen__name {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.lock-screen__heading {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.lock-screen__text {
+  margin: 0.45rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.lock-screen__form {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1.35rem;
+}
+
+.lock-screen__label {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.lock-screen__input {
+  width: 100%;
+  min-height: 2.85rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  color: var(--text);
+  font-size: 1.15rem;
+  letter-spacing: 0.28em;
+  font-variant-numeric: tabular-nums;
+}
+
+.lock-screen__input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+.lock-screen__input:disabled {
+  opacity: 0.7;
+}
+
+.lock-screen__error {
+  margin: 0;
+  color: var(--danger, #c2410c);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.lock-screen__submit {
+  min-height: 2.85rem;
+  margin-top: 0.35rem;
+  border: none;
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.98rem;
+}
+
+.lock-screen__submit:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.lock-screen__submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 359px) {
+  .lock-screen {
+    padding: 0.85rem;
+  }
+
+  .lock-screen__panel {
+    padding: 1.35rem 1rem 1.25rem;
+  }
+}

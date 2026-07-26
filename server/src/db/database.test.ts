@@ -53,6 +53,7 @@ describe('SQLite database layer', () => {
       expect.arrayContaining([
         'categories',
         'schema_migrations',
+        'security_settings',
         'settings',
         'snapshot_values',
         'snapshots',

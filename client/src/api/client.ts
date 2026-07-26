@@ -2,6 +2,7 @@ import type {
   ApiErrorBody,
   ApiSuccess,
   AppSettings,
+  AuthStatus,
   BackupExport,
   BackupImportResult,
   Category,
@@ -18,13 +19,39 @@ import type {
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
+  readonly details: unknown;
 
-  constructor(status: number, code: string, message: string) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    details?: unknown,
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.details = details;
   }
+}
+
+type PortfolioLockedHandler = () => void;
+
+let portfolioLockedHandler: PortfolioLockedHandler | null = null;
+
+/** Register a handler invoked when any API returns PORTFOLIO_LOCKED. */
+export function setPortfolioLockedHandler(
+  handler: PortfolioLockedHandler | null,
+): void {
+  portfolioLockedHandler = handler;
+}
+
+function getRetryAfterSeconds(details: unknown): number | undefined {
+  if (!details || typeof details !== 'object' || !('retryAfterSeconds' in details)) {
+    return undefined;
+  }
+  const value = details.retryAfterSeconds;
+  return typeof value === 'number' ? value : undefined;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -37,21 +64,28 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
     headers,
+    credentials: 'same-origin',
   });
 
   if (!response.ok) {
     let code = 'REQUEST_FAILED';
     let message = `Request failed with status ${String(response.status)}`;
+    let details: unknown;
 
     try {
       const body = (await response.json()) as ApiErrorBody;
       code = body.error.code;
       message = body.error.message;
+      details = body.error.details;
     } catch {
       // Keep the fallback message when the body is not JSON.
     }
 
-    throw new ApiError(response.status, code, message);
+    if (code === 'PORTFOLIO_LOCKED') {
+      portfolioLockedHandler?.();
+    }
+
+    throw new ApiError(response.status, code, message, details);
   }
 
   if (response.status === 204) {
@@ -60,6 +94,55 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   const body = (await response.json()) as ApiSuccess<T>;
   return body.data;
+}
+
+export function fetchAuthStatus(): Promise<AuthStatus> {
+  return request<AuthStatus>('/api/auth/status');
+}
+
+export function setupPin(pin: string): Promise<AuthStatus> {
+  return request<AuthStatus>('/api/auth/setup', {
+    method: 'POST',
+    body: JSON.stringify({ pin }),
+  });
+}
+
+export function unlockPortfolio(pin: string): Promise<AuthStatus> {
+  return request<AuthStatus>('/api/auth/unlock', {
+    method: 'POST',
+    body: JSON.stringify({ pin }),
+  });
+}
+
+export function lockPortfolio(): Promise<{ locked: boolean }> {
+  return request<{ locked: boolean }>('/api/auth/lock', {
+    method: 'POST',
+  });
+}
+
+export function changePin(
+  currentPin: string,
+  newPin: string,
+): Promise<AuthStatus> {
+  return request<AuthStatus>('/api/auth/change-pin', {
+    method: 'POST',
+    body: JSON.stringify({ currentPin, newPin }),
+  });
+}
+
+export function removePin(currentPin: string): Promise<AuthStatus> {
+  return request<AuthStatus>('/api/auth/pin', {
+    method: 'DELETE',
+    body: JSON.stringify({ currentPin }),
+  });
+}
+
+export function getApiErrorRetryAfterSeconds(error: unknown): number | null {
+  if (!(error instanceof ApiError)) {
+    return null;
+  }
+  const value = getRetryAfterSeconds(error.details);
+  return value ?? null;
 }
 
 export function fetchSettings(): Promise<AppSettings> {

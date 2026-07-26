@@ -59,6 +59,17 @@ describe('App dashboard', () => {
           : input instanceof URL
             ? input.toString()
             : input.url;
+      if (url.includes('/api/auth/status')) {
+        return Promise.resolve(
+          Response.json({
+            data: {
+              pinEnabled: false,
+              unlocked: true,
+              sessionExpiresAt: null,
+            },
+          }),
+        );
+      }
       if (url.includes('/api/settings')) {
         return Promise.resolve(
           Response.json({
@@ -116,6 +127,9 @@ describe('App dashboard', () => {
     ).toBeInTheDocument();
     expect(
       within(settingsDialog).getByRole('tab', { name: 'General' }),
+    ).toBeInTheDocument();
+    expect(
+      within(settingsDialog).getByRole('tab', { name: 'Security' }),
     ).toBeInTheDocument();
     expect(
       within(settingsDialog).getByRole('tab', { name: 'Backup and restore' }),

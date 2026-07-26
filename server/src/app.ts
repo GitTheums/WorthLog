@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import express from 'express';
 import { errorHandler } from './middleware/error-handler.js';
+import { createRequireUnlockedMiddleware } from './middleware/require-unlocked.js';
+import { createAuthRouter } from './routes/auth.js';
 import { createBackupRouter } from './routes/backup.js';
 import { createCategoriesRouter } from './routes/categories.js';
 import { createDashboardRouter } from './routes/dashboard.js';
@@ -22,6 +24,7 @@ function isApiPath(path: string): boolean {
 
 export function createApp(db: Database.Database, options: AppOptions) {
   const app = express();
+  const requireUnlocked = createRequireUnlockedMiddleware(db);
 
   app.disable('x-powered-by');
   app.use(express.json({ limit: '5mb' }));
@@ -31,12 +34,20 @@ export function createApp(db: Database.Database, options: AppOptions) {
     next();
   });
 
+  // Public endpoints
   app.use('/api', createHealthRouter(db));
-  app.use('/api/categories', createCategoriesRouter(db));
-  app.use('/api/snapshots', createSnapshotsRouter(db));
-  app.use('/api/dashboard', createDashboardRouter(db));
-  app.use('/api/settings', createSettingsRouter(db));
-  app.use('/api/backup', createBackupRouter(db, options.dataDir));
+  app.use('/api/auth', createAuthRouter(db));
+
+  // Portfolio endpoints — protected when a PIN is enabled
+  app.use('/api/categories', requireUnlocked, createCategoriesRouter(db));
+  app.use('/api/snapshots', requireUnlocked, createSnapshotsRouter(db));
+  app.use('/api/dashboard', requireUnlocked, createDashboardRouter(db));
+  app.use('/api/settings', requireUnlocked, createSettingsRouter(db));
+  app.use(
+    '/api/backup',
+    requireUnlocked,
+    createBackupRouter(db, options.dataDir),
+  );
 
   const clientDistDir = options.clientDistDir;
   if (clientDistDir && existsSync(join(clientDistDir, 'index.html'))) {

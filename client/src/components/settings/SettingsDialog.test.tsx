@@ -288,7 +288,7 @@ describe('settings dialog', () => {
     });
   });
 
-  it('saves general settings and explains the no-login local network model', async () => {
+  it('saves general settings and points users to the Security tab for access control', async () => {
     const patches: Array<Record<string, unknown>> = [];
     mockApi({
       onPatchSettings: (body) => {
@@ -304,7 +304,7 @@ describe('settings dialog', () => {
     await user.click(within(dialog).getByRole('tab', { name: 'General' }));
 
     expect(
-      within(dialog).getByText(/no login and is intended for a trusted local network/i),
+      within(dialog).getByText(/for access control, use the Security tab/i),
     ).toBeInTheDocument();
 
     const currency = within(dialog).getByLabelText('Currency');
