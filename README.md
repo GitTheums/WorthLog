@@ -8,6 +8,7 @@ A simple self-hosted app for manually logging investment category totals and wat
 
 ![Self-hosted](https://img.shields.io/badge/self--hosted-yes-2ea44f)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![GHCR](https://img.shields.io/badge/GHCR-ghcr.io%2Fgittheums%2Fworthlog-2496ED?logo=github)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-embedded-003B57?logo=sqlite&logoColor=white)
 
@@ -69,15 +70,23 @@ Worthlog is deliberately **not** a live portfolio tracker, broker integration, t
   />
 </div>
 
-## Quick Start with Docker Compose
+## Quick start
 
 **Prerequisites:** [Docker](https://docs.docker.com/get-docker/) and Docker Compose.
 
+The recommended install uses the published image from GitHub Container Registry:
+
+`ghcr.io/gittheums/worthlog`
+
 ```bash
-git clone https://github.com/GitTheums/WorthLog.git
-cd WorthLog
-mkdir -p data
-docker compose up -d --build
+mkdir -p worthlog/data
+cd worthlog
+```
+
+Create `docker-compose.ghcr.yml` (or download it from this repository) with the contents of [`docker-compose.ghcr.yml`](docker-compose.ghcr.yml), then start:
+
+```bash
+docker compose -f docker-compose.ghcr.yml up -d
 ```
 
 | Item | Value |
@@ -85,25 +94,59 @@ docker compose up -d --build
 | App URL | <http://localhost:8787> |
 | Health URL | <http://localhost:8787/api/health> |
 | Host port | `8787` → container port `3000` |
-| Compose service | `worthlog` |
+| Image | `ghcr.io/gittheums/worthlog:latest` |
+| Data directory | `./data` → `/app/data` |
 
-The first build compiles the TypeScript server and React client and may take a few minutes.
+### Direct `docker run`
 
 ```bash
-# Check status (wait until the health status is healthy)
-docker compose ps
-
-# Follow logs
-docker compose logs -f worthlog
-
-# Stop the application (data in ./data is kept)
-docker compose down
+docker run -d \
+  --name worthlog \
+  -p 8787:3000 \
+  -e TZ=Europe/Amsterdam \
+  -e DATA_DIR=/app/data \
+  -e PORT=3000 \
+  -e NODE_ENV=production \
+  -v "$(pwd)/data:/app/data" \
+  --restart unless-stopped \
+  ghcr.io/gittheums/worthlog:latest
 ```
 
-On Linux hosts, if the container cannot write to `./data`, own the directory as UID **1000** (the container `node` user):
+### Image tags
+
+| Tag | Meaning |
+| --- | --- |
+| `latest` | Latest stable published release |
+| `1.2.3` | Exact version pin |
+| `1.2` | Latest patch in the `1.2` series (from version-tag publishes) |
+
+Pin a release in Compose by changing the image line, for example:
+
+```yaml
+image: ghcr.io/gittheums/worthlog:1.0.0
+```
+
+Portfolio data stays in `./data` on the host. Pulling a new image and recreating the container does **not** remove `worthlog.db`. Back up `./data/worthlog.db` (or use Settings → Backup) before updating.
+
+### Data directory permissions
+
+The container runs as the non-root `node` user (**UID 1000**). On Linux, if Worthlog cannot write to `./data`:
 
 ```bash
 sudo chown -R 1000:1000 data
+```
+
+### Useful commands
+
+```bash
+# Check status (wait until healthy)
+docker compose -f docker-compose.ghcr.yml ps
+
+# Follow logs
+docker compose -f docker-compose.ghcr.yml logs -f worthlog
+
+# Stop (data in ./data is kept)
+docker compose -f docker-compose.ghcr.yml down
 ```
 
 ## Installation on a Linux server or Proxmox LXC
@@ -111,16 +154,12 @@ sudo chown -R 1000:1000 data
 Worthlog runs well in a Debian or Ubuntu VM or LXC once Docker and Docker Compose are installed. This section assumes the container host already exists; it does not cover creating a Proxmox LXC from scratch.
 
 ```bash
-# Clone into /opt (adjust if you prefer another path)
-sudo git clone https://github.com/GitTheums/WorthLog.git /opt/WorthLog
-cd /opt/WorthLog
-
-# Persistent data directory — must be writable by UID 1000 inside the container
-mkdir -p data
+sudo mkdir -p /opt/worthlog/data
+cd /opt/worthlog
 sudo chown -R 1000:1000 data
 
-# Build and start
-docker compose up -d --build
+# Copy docker-compose.ghcr.yml from the repository into this directory, then:
+sudo docker compose -f docker-compose.ghcr.yml up -d
 ```
 
 Open **TCP 8787** only on your trusted local network (firewall / security group). Then visit:
@@ -166,31 +205,33 @@ In the Worthlog UI: **Settings → Backup and restore**.
 Stop the container first so WAL files are flushed cleanly, copy the database, then start again:
 
 ```bash
-cd /opt/WorthLog   # or your clone path
-docker compose stop worthlog
+cd /opt/worthlog   # or your install path
+docker compose -f docker-compose.ghcr.yml stop worthlog
 cp data/worthlog.db "data/worthlog.db.backup-$(date +%Y%m%d-%H%M%S)"
-docker compose start worthlog
+docker compose -f docker-compose.ghcr.yml start worthlog
 ```
 
 Keep the backup copy outside the machine if you need off-host recovery.
 
 ## Updating Worthlog
 
-Create a database backup first (JSON export or the SQLite copy above), then:
+Create a database backup first (JSON export or the SQLite copy above), then pull the newer image:
 
 ```bash
-cd /opt/WorthLog   # or your clone path
-git pull
-docker compose up -d --build
+cd /opt/worthlog   # or your install path
+docker compose -f docker-compose.ghcr.yml pull
+docker compose -f docker-compose.ghcr.yml up -d
 ```
+
+Updating the image does not delete `./data` or `worthlog.db`.
 
 Useful follow-up commands:
 
 ```bash
-docker compose ps
-docker compose logs -f --tail=100 worthlog
+docker compose -f docker-compose.ghcr.yml ps
+docker compose -f docker-compose.ghcr.yml logs -f --tail=100 worthlog
 
-# Remove unused build images only — does not remove volumes or ./data
+# Remove unused images only — does not remove ./data
 docker image prune -f
 ```
 
@@ -205,7 +246,7 @@ Application environment variables (see also [`.env.example`](.env.example)):
 | `DATA_DIR` | `./data` | No | Directory for persistent data; database is `${DATA_DIR}/worthlog.db` |
 | `CLIENT_DIST_DIR` | unset | No | Path to the built React app. Docker sets `/app/client/dist` |
 
-Docker Compose also sets `TZ=Europe/Amsterdam` for the container timezone. That value is not read by Worthlog’s own config schema; change it in `docker-compose.yml` if you need a different zone.
+Docker Compose also sets `TZ=Europe/Amsterdam` for the container timezone. That value is not read by Worthlog’s own config schema; change it in `docker-compose.ghcr.yml` (or `docker-compose.yml`) if you need a different zone.
 
 ### Docker port mapping
 
@@ -213,7 +254,7 @@ Docker Compose also sets `TZ=Europe/Amsterdam` for the container timezone. That 
 | --- | --- | --- |
 | `8787` | `3000` | Browser access to the UI and `/api` |
 
-Change the left-hand side in `docker-compose.yml` if port 8787 is already in use on the host.
+Change the left-hand side in the Compose file if port 8787 is already in use on the host.
 
 ## Healthcheck and monitoring
 
@@ -236,6 +277,20 @@ A healthy response looks like:
 ```
 
 The Docker image and Compose file include a healthcheck against this endpoint. You can point an uptime monitor such as [Uptime Kuma](https://github.com/louislam/uptime-kuma) at the same URL. Worthlog does not ship a built-in integration with any monitoring product.
+
+## Build from source (developers)
+
+To build the image locally instead of pulling from GHCR:
+
+```bash
+git clone https://github.com/GitTheums/WorthLog.git
+cd WorthLog
+mkdir -p data
+# Linux: sudo chown -R 1000:1000 data
+docker compose up -d --build
+```
+
+This uses `docker-compose.yml` with `build: .` and the multi-stage `Dockerfile`. The first build may take a few minutes.
 
 ## Development
 
@@ -276,16 +331,31 @@ npm run test -w server
 
 ```text
 WorthLog/
-├── client/               # React + TypeScript + Vite frontend
-├── server/               # Express + TypeScript API + SQLite
-├── data/                 # Persistent SQLite data (created at runtime; gitignored)
+├── client/                   # React + TypeScript + Vite frontend
+├── server/                   # Express + TypeScript API + SQLite
+├── data/                     # Persistent SQLite data (created at runtime; gitignored)
 ├── docs/
-│   └── screenshots/      # README screenshots
-├── Dockerfile            # Multi-stage production image
-├── docker-compose.yml    # Single-service deployment
-├── .env.example          # Documented environment variables
-└── package.json          # npm workspaces root
+│   └── screenshots/          # README screenshots
+├── .github/workflows/        # CI — GHCR publish workflow
+├── Dockerfile                # Multi-stage production image
+├── docker-compose.yml        # Local source-build deployment
+├── docker-compose.ghcr.yml   # Production example using GHCR image
+├── .env.example              # Documented environment variables
+└── package.json              # npm workspaces root
 ```
+
+## Publishing container images (maintainers)
+
+Pushes of tags matching `v*.*.*` (for example `v1.0.0`) build `linux/amd64` and `linux/arm64` images and publish them to `ghcr.io/gittheums/worthlog` via [`.github/workflows/publish-container.yml`](.github/workflows/publish-container.yml).
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+That publishes tags such as `1.0.0`, `1.0`, and `latest`. Manual runs from `main` can refresh `latest` (and a `sha-…` tag) without creating a release tag.
+
+After the first package appears under the GitHub account/org, open **Packages → worthlog → Package settings** and set visibility to **Public** if you want anonymous pulls.
 
 ## Optional PIN Protection
 
@@ -316,30 +386,30 @@ Worthlog only displays information you enter manually. It does not retrieve or v
 ### Container will not start
 
 ```bash
-docker compose ps
-docker compose logs worthlog
+docker compose -f docker-compose.ghcr.yml ps
+docker compose -f docker-compose.ghcr.yml logs worthlog
 ```
 
-Confirm Docker is running and the image built successfully (`docker compose up -d --build`).
+Confirm Docker is running and the image is available (`docker compose -f docker-compose.ghcr.yml pull`). For source builds, use `docker compose up -d --build`.
 
 ### Permission denied on the data directory (Linux)
 
 ```bash
 mkdir -p data
 sudo chown -R 1000:1000 data
-docker compose up -d
+docker compose -f docker-compose.ghcr.yml up -d
 ```
 
 ### Port 8787 already in use
 
-Change the host port in `docker-compose.yml`, for example `"8788:3000"`, then run `docker compose up -d` again.
+Change the host port in `docker-compose.ghcr.yml` (or `docker-compose.yml`), for example `"8788:3000"`, then bring the stack up again.
 
 ### Health endpoint unavailable
 
 ```bash
 curl -sS http://localhost:8787/api/health
-docker compose ps
-docker compose logs --tail=100 worthlog
+docker compose -f docker-compose.ghcr.yml ps
+docker compose -f docker-compose.ghcr.yml logs --tail=100 worthlog
 ```
 
 Wait for the health status to become `healthy` after the first start (`start_period` is 15 seconds).
@@ -347,10 +417,10 @@ Wait for the health status to become `healthy` after the first start (`start_per
 ### View logs
 
 ```bash
-docker compose logs -f worthlog
+docker compose -f docker-compose.ghcr.yml logs -f worthlog
 ```
 
-### Rebuild after an update
+### Rebuild after an update (source build)
 
 ```bash
 git pull

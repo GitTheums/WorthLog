@@ -17,12 +17,18 @@ node_modules
 .env.*
 !.env.example
 
-# Local persistent data (bind-mounted at runtime)
+# Local persistent data (bind-mounted at runtime — never bake into the image)
 data
+**/data
 *.db
 *.db-journal
 *.db-shm
 *.db-wal
+*.backup.*
+worthlog.backup.*
+
+# Screenshots may contain private portfolio values
+docs/screenshots
 
 # Editor / OS / tooling
 .cursor

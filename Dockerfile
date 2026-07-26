@@ -1,5 +1,10 @@
 # syntax=docker/dockerfile:1
 
+# Multi-stage production image for amd64 and arm64.
+# better-sqlite3 is compiled in the build/prod-deps stages (python3/make/g++)
+# so Buildx rebuilds the native addon per target platform.
+# Persistent SQLite data lives at /app/data and is never copied into the image.
+
 # -----------------------------------------------------------------------------
 # Build stage: compile the React client and TypeScript server (better-sqlite3)
 # -----------------------------------------------------------------------------
@@ -47,6 +52,12 @@ RUN npm ci --omit=dev -w server \
 # -----------------------------------------------------------------------------
 FROM node:24-bookworm-slim AS runtime
 
+# OCI labels are primarily set by the publish workflow (docker/metadata-action).
+# Defaults here help local builds remain identifiable.
+LABEL org.opencontainers.image.title="WorthLog" \
+  org.opencontainers.image.description="Self-hosted investment value logging application" \
+  org.opencontainers.image.source="https://github.com/GitTheums/WorthLog"
+
 ENV NODE_ENV=production \
     PORT=3000 \
     DATA_DIR=/app/data \
@@ -61,6 +72,7 @@ COPY --from=build /app/server/dist ./server/dist
 COPY --from=build /app/client/dist ./client/dist
 
 # Persist SQLite here; host bind mounts should be owned by UID 1000 (node).
+# Do not COPY any database files — ./data is excluded via .dockerignore.
 RUN mkdir -p /app/data \
   && chown -R node:node /app/data
 
