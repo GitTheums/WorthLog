@@ -7,6 +7,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
 import { openDatabase } from './db/index.js';
+import { createRateLimiters } from './middleware/rateLimits.js';
 
 describe('production static and SPA fallback', () => {
   let dataDir: string;
@@ -30,7 +31,11 @@ describe('production static and SPA fallback', () => {
     );
 
     db = openDatabase(dataDir);
-    app = createApp(db, { dataDir, clientDistDir });
+    app = createApp(db, {
+      dataDir,
+      clientDistDir,
+      rateLimiters: createRateLimiters(),
+    });
   });
 
   afterEach(() => {

@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import { Router } from 'express';
+import { Router, type RequestHandler } from 'express';
 import {
   clearPinCredentials,
   getSecuritySettings,
@@ -7,6 +7,10 @@ import {
 } from '../db/repositories/security.js';
 import { sendData, sendError } from '../http/response.js';
 import { asyncHandler } from '../middleware/async-handler.js';
+import {
+  authPinRateLimiter,
+  authStatusRateLimiter,
+} from '../middleware/rateLimits.js';
 import { createRequireUnlockedMiddleware } from '../middleware/require-unlocked.js';
 import {
   clearSessionCookie,
@@ -45,12 +49,24 @@ function issueSession(
   return session;
 }
 
-export function createAuthRouter(db: Database.Database): Router {
+export interface AuthRateLimiters {
+  authStatusRateLimiter: RequestHandler;
+  authPinRateLimiter: RequestHandler;
+}
+
+export function createAuthRouter(
+  db: Database.Database,
+  limiters: AuthRateLimiters = {
+    authStatusRateLimiter,
+    authPinRateLimiter,
+  },
+): Router {
   const router = Router();
   const requireUnlocked = createRequireUnlockedMiddleware(db);
 
   router.get(
     '/status',
+    limiters.authStatusRateLimiter,
     asyncHandler((req, res) => {
       const security = getSecuritySettings(db);
       if (!security.pinEnabled) {
@@ -76,6 +92,7 @@ export function createAuthRouter(db: Database.Database): Router {
 
   router.post(
     '/setup',
+    limiters.authPinRateLimiter,
     asyncHandler((req, res) => {
       const security = getSecuritySettings(db);
       if (security.pinEnabled) {
@@ -119,6 +136,7 @@ export function createAuthRouter(db: Database.Database): Router {
 
   router.post(
     '/unlock',
+    limiters.authPinRateLimiter,
     asyncHandler((req, res) => {
       const security = getSecuritySettings(db);
       if (!security.pinEnabled || !security.pinHash || !security.pinSalt) {
@@ -170,6 +188,7 @@ export function createAuthRouter(db: Database.Database): Router {
 
   router.post(
     '/lock',
+    limiters.authStatusRateLimiter,
     asyncHandler((req, res) => {
       const token = getSessionTokenFromRequest(req);
       invalidateSessionToken(token);
@@ -180,6 +199,7 @@ export function createAuthRouter(db: Database.Database): Router {
 
   router.post(
     '/change-pin',
+    limiters.authPinRateLimiter,
     requireUnlocked,
     asyncHandler((req, res) => {
       const security = getSecuritySettings(db);
@@ -241,6 +261,7 @@ export function createAuthRouter(db: Database.Database): Router {
 
   router.delete(
     '/pin',
+    limiters.authPinRateLimiter,
     requireUnlocked,
     asyncHandler((req, res) => {
       const security = getSecuritySettings(db);

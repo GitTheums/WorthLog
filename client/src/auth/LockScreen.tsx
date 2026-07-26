@@ -60,6 +60,11 @@ export function LockScreen() {
         setError(
           `Too many attempts. Try again in ${String(retry)} seconds.`,
         );
+      } else if (
+        caught instanceof ApiError &&
+        (caught.code === 'RATE_LIMITED' || caught.code === 'TOO_MANY_ATTEMPTS')
+      ) {
+        setError('Too many attempts. Please try again later.');
       } else if (caught instanceof ApiError && caught.code === 'INVALID_PIN') {
         setError('That PIN is incorrect.');
       } else if (caught instanceof Error) {

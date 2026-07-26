@@ -3,8 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import type { Express } from 'express';
-import { createApp } from '../app.js';
+import { createApp, type AppOptions } from '../app.js';
 import { openDatabase } from '../db/index.js';
+import { createRateLimiters } from '../middleware/rateLimits.js';
 import {
   createCategory,
   listCategories,
@@ -54,6 +55,8 @@ export function ensureMultiCategoryFixture(db: Database.Database): void {
 
 export function createTestContext(options?: {
   multiCategory?: boolean;
+  trustProxy?: AppOptions['trustProxy'];
+  rateLimiters?: AppOptions['rateLimiters'];
 }): TestContext {
   const dataDir = mkdtempSync(join(tmpdir(), 'worthlog-api-'));
   const db = openDatabase(dataDir);
@@ -61,7 +64,14 @@ export function createTestContext(options?: {
     // Most API/dashboard tests still use the classic four-category fixture.
     ensureMultiCategoryFixture(db);
   }
-  const app = createApp(db, { dataDir });
+  // Fresh in-memory limiters per test app so suites do not share hit counters.
+  const app = createApp(db, {
+    dataDir,
+    rateLimiters: options?.rateLimiters ?? createRateLimiters(),
+    ...(options?.trustProxy !== undefined
+      ? { trustProxy: options.trustProxy }
+      : {}),
+  });
 
   return {
     app,

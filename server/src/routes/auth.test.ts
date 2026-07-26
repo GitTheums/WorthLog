@@ -11,6 +11,7 @@ import { openDatabase } from '../db/open-database.js';
 import { getSecuritySettings } from '../db/repositories/security.js';
 import { listCategories } from '../db/repositories/categories.js';
 import { listSnapshotDetails } from '../db/repositories/snapshots.js';
+import { createRateLimiters } from '../middleware/rateLimits.js';
 import { __resetPinRateLimitForTests } from '../security/pin-rate-limit.js';
 import {
   __expireSessionForTests,
@@ -374,7 +375,10 @@ describe('auth / PIN protection', () => {
   it('serves the SPA fallback without intercepting auth API routes', async () => {
     const dataDir = mkdtempSync(join(tmpdir(), 'worthlog-static-auth-'));
     const db = openDatabase(dataDir);
-    const app = createApp(db, { dataDir });
+    const app = createApp(db, {
+      dataDir,
+      rateLimiters: createRateLimiters(),
+    });
     try {
       const response = await request(app).get('/api/auth/status');
       expect(response.status).toBe(200);

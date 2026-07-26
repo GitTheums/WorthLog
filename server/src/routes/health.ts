@@ -1,11 +1,15 @@
 import type Database from 'better-sqlite3';
-import { Router } from 'express';
+import { Router, type RequestHandler } from 'express';
+import { healthRateLimiter } from '../middleware/rateLimits.js';
 import { getAppVersion } from '../version.js';
 
-export function createHealthRouter(db: Database.Database): Router {
+export function createHealthRouter(
+  db: Database.Database,
+  limiter: RequestHandler = healthRateLimiter,
+): Router {
   const router = Router();
 
-  router.get('/health', (_req, res) => {
+  router.get('/health', limiter, (_req, res) => {
     const version = getAppVersion();
 
     try {

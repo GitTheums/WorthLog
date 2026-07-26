@@ -36,6 +36,7 @@ const clientDistDir = resolveClientDistDir(
 );
 const app = createApp(db, {
   dataDir: config.DATA_DIR,
+  trustProxy: config.TRUST_PROXY,
   ...(clientDistDir ? { clientDistDir } : {}),
 });
 

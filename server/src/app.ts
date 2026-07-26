@@ -3,6 +3,15 @@ import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import express from 'express';
 import { errorHandler } from './middleware/error-handler.js';
+import {
+  authPinRateLimiter,
+  authStatusRateLimiter,
+  createRateLimiters,
+  healthRateLimiter,
+  portfolioApiRateLimiter,
+  spaFallbackRateLimiter,
+  type AppRateLimiters,
+} from './middleware/rateLimits.js';
 import { createRequireUnlockedMiddleware } from './middleware/require-unlocked.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createBackupRouter } from './routes/backup.js';
@@ -16,17 +25,42 @@ export interface AppOptions {
   dataDir: string;
   /** Absolute path to the Vite client build output (`index.html` + assets). */
   clientDistDir?: string;
+  /**
+   * Express trust proxy hop count, or false to ignore forwarded headers.
+   * Default false — safe for direct LAN access.
+   */
+  trustProxy?: number | false;
+  /** Optional rate limiter overrides (primarily for tests). */
+  rateLimiters?: AppRateLimiters;
 }
 
 function isApiPath(path: string): boolean {
   return path === '/api' || path.startsWith('/api/');
 }
 
+const defaultRateLimiters: AppRateLimiters = {
+  portfolioApiRateLimiter,
+  authStatusRateLimiter,
+  authPinRateLimiter,
+  healthRateLimiter,
+  spaFallbackRateLimiter,
+};
+
 export function createApp(db: Database.Database, options: AppOptions) {
   const app = express();
   const requireUnlocked = createRequireUnlockedMiddleware(db);
+  const limiters = options.rateLimiters ?? defaultRateLimiters;
 
   app.disable('x-powered-by');
+
+  if (
+    typeof options.trustProxy === 'number' &&
+    Number.isInteger(options.trustProxy) &&
+    options.trustProxy > 0
+  ) {
+    app.set('trust proxy', options.trustProxy);
+  }
+
   app.use(express.json({ limit: '5mb' }));
 
   app.use('/api', (_req, res, next) => {
@@ -34,23 +68,51 @@ export function createApp(db: Database.Database, options: AppOptions) {
     next();
   });
 
-  // Public endpoints
-  app.use('/api', createHealthRouter(db));
-  app.use('/api/auth', createAuthRouter(db));
+  // Public endpoints (dedicated limiters — not the portfolio API limiter)
+  app.use('/api', createHealthRouter(db, limiters.healthRateLimiter));
+  app.use(
+    '/api/auth',
+    createAuthRouter(db, {
+      authStatusRateLimiter: limiters.authStatusRateLimiter,
+      authPinRateLimiter: limiters.authPinRateLimiter,
+    }),
+  );
 
-  // Portfolio endpoints — protected when a PIN is enabled
-  app.use('/api/categories', requireUnlocked, createCategoriesRouter(db));
-  app.use('/api/snapshots', requireUnlocked, createSnapshotsRouter(db));
-  app.use('/api/dashboard', requireUnlocked, createDashboardRouter(db));
-  app.use('/api/settings', requireUnlocked, createSettingsRouter(db));
+  // Portfolio endpoints — one portfolio limiter per mount (no nested duplicates)
+  app.use(
+    '/api/categories',
+    limiters.portfolioApiRateLimiter,
+    requireUnlocked,
+    createCategoriesRouter(db),
+  );
+  app.use(
+    '/api/snapshots',
+    limiters.portfolioApiRateLimiter,
+    requireUnlocked,
+    createSnapshotsRouter(db),
+  );
+  app.use(
+    '/api/dashboard',
+    limiters.portfolioApiRateLimiter,
+    requireUnlocked,
+    createDashboardRouter(db),
+  );
+  app.use(
+    '/api/settings',
+    limiters.portfolioApiRateLimiter,
+    requireUnlocked,
+    createSettingsRouter(db),
+  );
   app.use(
     '/api/backup',
+    limiters.portfolioApiRateLimiter,
     requireUnlocked,
     createBackupRouter(db, options.dataDir),
   );
 
   const clientDistDir = options.clientDistDir;
   if (clientDistDir && existsSync(join(clientDistDir, 'index.html'))) {
+    // Static assets (JS/CSS/favicon) — not rate-limited by the API limiter.
     app.use(
       express.static(clientDistDir, {
         index: false,
@@ -58,7 +120,8 @@ export function createApp(db: Database.Database, options: AppOptions) {
       }),
     );
 
-    app.use((req, res, next) => {
+    // SPA HTML fallback is a custom filesystem sendFile handler — rate-limit it.
+    app.use(limiters.spaFallbackRateLimiter, (req, res, next) => {
       if (req.method !== 'GET' && req.method !== 'HEAD') {
         next();
         return;
@@ -84,3 +147,6 @@ export function createApp(db: Database.Database, options: AppOptions) {
 
   return app;
 }
+
+/** Re-export for tests that need fresh limiter instances. */
+export { createRateLimiters };

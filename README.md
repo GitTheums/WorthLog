@@ -245,6 +245,7 @@ Application environment variables (see also [`.env.example`](.env.example)):
 | `NODE_ENV` | `development` | No | `development`, `test`, or `production` |
 | `DATA_DIR` | `./data` | No | Directory for persistent data; database is `${DATA_DIR}/worthlog.db` |
 | `CLIENT_DIST_DIR` | unset | No | Path to the built React app. Docker sets `/app/client/dist` |
+| `TRUST_PROXY` | unset (disabled) | No | Trusted reverse-proxy hop count (e.g. `1`). Leave unset for direct LAN access |
 
 Docker Compose also sets `TZ=Europe/Amsterdam` for the container timezone. That value is not read by Worthlog’s own config schema; change it in `docker-compose.ghcr.yml` (or `docker-compose.yml`) if you need a different zone.
 
@@ -369,6 +370,23 @@ Worthlog can require a numeric PIN (4–8 digits) before portfolio data is avail
 
 This is a single-portfolio local convenience lock, not a multi-user account system or internet-grade authentication.
 
+## Rate limiting
+
+Worthlog enables server-side HTTP rate limiting by default (in-memory, per Node.js process):
+
+| Area | Window | Limit |
+| --- | --- | --- |
+| Portfolio API (dashboard, snapshots, categories, settings, backup) | 15 minutes | 500 requests / client |
+| Auth status / lock | 1 minute | 120 requests / client |
+| PIN setup, unlock, change, remove | 15 minutes | 20 requests / client |
+| Health check | 1 minute | 120 requests / client |
+
+PIN unlock also keeps a separate incorrect-PIN lockout (escalating delay after repeated failures). Rate limiting complements that protection; it does not replace HTTPS, a VPN, or network controls.
+
+Counters live in memory: restarting the container resets them. Multiple replicated Worthlog processes would need a shared rate-limit store (not included).
+
+When WorthLog is behind a reverse proxy, set `TRUST_PROXY` to the hop count (see `.env.example`). Leave it unset for direct LAN access so `X-Forwarded-For` cannot spoof client identity.
+
 ## Security
 
 - Prefer a **trusted local network** or personal machine.
@@ -376,6 +394,7 @@ This is a single-portfolio local convenience lock, not a multi-user account syst
 - The database can contain **private financial information**.
 - Do **not** expose the app directly to the public internet.
 - For remote access, use **HTTPS**, a **VPN**, or an **authenticated reverse proxy**.
+- Configure `TRUST_PROXY` correctly when using a reverse proxy so rate limiting and cookies behave as intended.
 
 ## Data and financial disclaimer
 
