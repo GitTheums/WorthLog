@@ -81,3 +81,34 @@
   background: var(--negative);
   color: #fff;
 }
+
+@media (max-width: 767px) {
+  .confirm-dialog {
+    padding: max(0.75rem, env(safe-area-inset-top))
+      max(0.75rem, env(safe-area-inset-right))
+      max(0.75rem, env(safe-area-inset-bottom))
+      max(0.75rem, env(safe-area-inset-left));
+    align-items: end;
+  }
+
+  .confirm-dialog__panel {
+    width: 100%;
+    max-height: min(92dvh, 100%);
+    overflow: auto;
+    border-radius: 18px 18px 14px 14px;
+    padding: var(--space-5);
+  }
+
+  .confirm-dialog__actions {
+    flex-wrap: wrap;
+  }
+
+  .confirm-dialog__button {
+    min-height: 2.75rem;
+    flex: 1 1 auto;
+  }
+
+  .confirm-dialog__description input {
+    font-size: 16px;
+  }
+}

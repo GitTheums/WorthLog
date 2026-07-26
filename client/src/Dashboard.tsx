@@ -17,6 +17,7 @@ import {
   SnapshotModal,
   type SnapshotModalMode,
 } from './components/SnapshotModal';
+import { PrivacyValue } from './components/PrivacyValue';
 import { SummaryCards } from './components/SummaryCards';
 import { Toast, type ToastMessage } from './components/Toast';
 import { TotalValueChart } from './components/TotalValueChart';
@@ -25,6 +26,7 @@ import { useSettings } from './hooks/useSettings';
 import { useTheme } from './hooks/useTheme';
 import { formatMoney, formatSnapshotDate } from './lib/format';
 import { createClientId } from './lib/id';
+import { usePrivacyModeContext } from './privacy/PrivacyModeContext';
 import './Dashboard.css';
 
 interface DeleteTarget {
@@ -34,6 +36,8 @@ interface DeleteTarget {
 
 export function Dashboard() {
   const { theme, toggleTheme } = useTheme();
+  const { hidden: privacyHidden, toggle: togglePrivacy } =
+    usePrivacyModeContext();
   const {
     settings,
     loading: settingsLoading,
@@ -237,7 +241,9 @@ export function Dashboard() {
       <div className="dashboard">
         <Header
           theme={theme}
+          privacyHidden={privacyHidden}
           onToggleTheme={toggleTheme}
+          onTogglePrivacy={togglePrivacy}
           onAddSnapshot={() => {
             const active = document.activeElement;
             openAddSnapshot(
@@ -284,9 +290,18 @@ export function Dashboard() {
         open={deleteTarget !== null}
         title="Delete snapshot?"
         description={
-          deleteTarget
-            ? `Delete the snapshot for ${formatSnapshotDate(deleteTarget.date)} with a total of ${formatMoney(deleteTarget.totalValueCents, currency)}? This cannot be undone.`
-            : ''
+          deleteTarget ? (
+            <>
+              Delete the snapshot for{' '}
+              {formatSnapshotDate(deleteTarget.date)} with a total of{' '}
+              <PrivacyValue>
+                {formatMoney(deleteTarget.totalValueCents, currency)}
+              </PrivacyValue>
+              ? This cannot be undone.
+            </>
+          ) : (
+            ''
+          )
         }
         confirmLabel="Delete snapshot"
         tone="danger"

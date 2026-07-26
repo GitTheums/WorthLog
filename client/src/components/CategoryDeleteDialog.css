@@ -42,3 +42,14 @@
   color: var(--negative);
   font-size: 0.9rem;
 }
+
+@media (max-width: 767px) {
+  .category-delete-dialog__panel {
+    width: 100%;
+  }
+
+  .category-delete-dialog__confirm-field input {
+    font-size: 16px;
+    min-height: 2.75rem;
+  }
+}

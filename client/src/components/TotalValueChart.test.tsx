@@ -1,12 +1,13 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { dashboardFixture } from '../test/fixtures';
+import { renderWithProviders } from '../test/render';
 import { TotalValueChart } from './TotalValueChart';
 
 describe('TotalValueChart', () => {
   it('shows a useful message for a single-point range', () => {
-    render(
+    renderWithProviders(
       <TotalValueChart
         data={{
           ...dashboardFixture,
@@ -32,7 +33,7 @@ describe('TotalValueChart', () => {
   });
 
   it('shows an empty-range message instead of a broken chart', () => {
-    render(
+    renderWithProviders(
       <TotalValueChart
         data={{
           ...dashboardFixture,
@@ -54,7 +55,7 @@ describe('TotalValueChart', () => {
   it('toggles category visibility from the legend', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithProviders(
       <TotalValueChart
         data={dashboardFixture}
         currency="EUR"

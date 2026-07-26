@@ -9,12 +9,15 @@ import {
   YAxis,
 } from 'recharts';
 import type { DashboardData, DashboardRange } from '../api/types';
+import { useIsMobileLayout } from '../hooks/useMediaQuery';
 import {
   formatChartTick,
+  formatChartTickCompact,
   formatCompactMoney,
   formatMoney,
   formatSnapshotDate,
 } from '../lib/format';
+import { usePrivacyModeContext } from '../privacy/PrivacyModeContext';
 import { RangeControls } from './RangeControls';
 import './TotalValueChart.css';
 
@@ -45,11 +48,13 @@ function ChartTooltip({
   payload,
   currency,
   categoryNames,
+  privacyHidden,
 }: {
   active?: boolean;
   payload?: TooltipPayloadItem[];
   currency: string;
   categoryNames: Map<string, string>;
+  privacyHidden: boolean;
 }) {
   if (!active || !payload?.length || !payload[0]?.payload?.date) {
     return null;
@@ -60,31 +65,35 @@ function ChartTooltip({
   return (
     <div className="chart-tooltip">
       <p className="chart-tooltip__date">{formatSnapshotDate(date)}</p>
-      <ul className="chart-tooltip__list">
-        {payload.map((item) => {
-          if (item.value === undefined || item.dataKey === undefined) {
-            return null;
-          }
-          const key = String(item.dataKey);
-          const label =
-            key === 'totalValueCents'
-              ? 'Total'
-              : (categoryNames.get(key) ?? item.name ?? key);
-          return (
-            <li key={key} className="chart-tooltip__row">
-              <span
-                className="chart-tooltip__swatch"
-                style={{ background: item.color ?? 'var(--accent)' }}
-                aria-hidden="true"
-              />
-              <span className="chart-tooltip__label">{label}</span>
-              <span className="chart-tooltip__value">
-                {formatMoney(item.value, currency)}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+      {privacyHidden ? (
+        <p className="chart-tooltip__value">Value hidden</p>
+      ) : (
+        <ul className="chart-tooltip__list">
+          {payload.map((item) => {
+            if (item.value === undefined || item.dataKey === undefined) {
+              return null;
+            }
+            const key = String(item.dataKey);
+            const label =
+              key === 'totalValueCents'
+                ? 'Total'
+                : (categoryNames.get(key) ?? item.name ?? key);
+            return (
+              <li key={key} className="chart-tooltip__row">
+                <span
+                  className="chart-tooltip__swatch"
+                  style={{ background: item.color ?? 'var(--accent)' }}
+                  aria-hidden="true"
+                />
+                <span className="chart-tooltip__label">{label}</span>
+                <span className="chart-tooltip__value">
+                  {formatMoney(item.value, currency)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
@@ -98,6 +107,8 @@ export function TotalValueChart({
 }: TotalValueChartProps) {
   const points = data.timeSeries;
   const categories = data.categoryTimeSeries;
+  const isMobile = useIsMobileLayout();
+  const { hidden: privacyHidden } = usePrivacyModeContext();
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(
     () => new Set(),
   );
@@ -153,7 +164,9 @@ export function TotalValueChart({
             Portfolio value across snapshots
           </p>
         </div>
-        <RangeControls value={range} onChange={onRangeChange} />
+        <div className="total-chart__ranges">
+          <RangeControls value={range} onChange={onRangeChange} />
+        </div>
       </div>
 
       {emptyRange ? (
@@ -177,7 +190,12 @@ export function TotalValueChart({
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartRows}
-                margin={{ top: 12, right: 12, left: 0, bottom: 4 }}
+                margin={{
+                  top: 12,
+                  right: 8,
+                  left: privacyHidden ? 0 : 4,
+                  bottom: 4,
+                }}
               >
                 <CartesianGrid
                   stroke="var(--chart-grid)"
@@ -188,27 +206,36 @@ export function TotalValueChart({
                   dataKey="date"
                   tickLine={false}
                   axisLine={false}
-                  minTickGap={32}
+                  minTickGap={isMobile ? 40 : 32}
                   interval="preserveStartEnd"
-                  tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
+                  tick={{ fill: 'var(--chart-axis)', fontSize: isMobile ? 11 : 12 }}
                   tickFormatter={(value: string, index: number) =>
-                    formatChartTick(value, index, points.length)
+                    isMobile
+                      ? formatChartTickCompact(value, index, points.length)
+                      : formatChartTick(value, index, points.length)
                   }
                 />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
-                  width={78}
-                  tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
+                  width={privacyHidden ? 28 : isMobile ? 56 : 78}
+                  tick={
+                    privacyHidden
+                      ? false
+                      : { fill: 'var(--chart-axis)', fontSize: isMobile ? 11 : 12 }
+                  }
                   tickFormatter={(value: number) =>
-                    formatCompactMoney(value, currency)
+                    privacyHidden ? '' : formatCompactMoney(value, currency)
                   }
                 />
                 <Tooltip
+                  allowEscapeViewBox={{ x: true, y: true }}
+                  wrapperStyle={{ zIndex: 20, outline: 'none' }}
                   content={
                     <ChartTooltip
                       currency={currency}
                       categoryNames={categoryNames}
+                      privacyHidden={privacyHidden}
                     />
                   }
                   cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}

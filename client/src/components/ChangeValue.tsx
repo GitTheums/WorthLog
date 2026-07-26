@@ -1,4 +1,5 @@
 import { changeTone, formatPercent, formatSignedMoney } from '../lib/format';
+import { PrivacyValue } from './PrivacyValue';
 import './ChangeValue.css';
 
 interface ChangeValueProps {
@@ -20,7 +21,7 @@ export function ChangeValue({
 
   return (
     <span className={`change-value change-value--${tone}`}>
-      <span>{formatSignedMoney(amountCents, currency)}</span>
+      <PrivacyValue>{formatSignedMoney(amountCents, currency)}</PrivacyValue>
       {percent !== null ? (
         <span className="change-value__percent">{formatPercent(percent)}</span>
       ) : null}

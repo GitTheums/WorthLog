@@ -1,0 +1,31 @@
+.brand-mark {
+  display: flex;
+  align-items: end;
+  gap: 3px;
+  width: 2rem;
+  height: 2rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  flex-shrink: 0;
+}
+
+.brand-mark__bar {
+  width: 4px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0.55;
+}
+
+.brand-mark__bar--mid {
+  height: 12px;
+  opacity: 0.8;
+}
+
+.brand-mark__bar--tall {
+  height: 16px;
+  opacity: 1;
+}

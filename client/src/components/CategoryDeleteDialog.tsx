@@ -7,6 +7,7 @@ import {
   type SyntheticEvent,
 } from 'react';
 import type { Category, CategoryDeletionImpact } from '../api/types';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import './ConfirmDialog.css';
 import './CategoryDeleteDialog.css';
@@ -49,6 +50,8 @@ export function CategoryDeleteDialog({
     category !== null &&
     impact !== null &&
     (!hasHistory || nameMatches);
+
+  useBodyScrollLock(open);
 
   useFocusTrap({
     open,

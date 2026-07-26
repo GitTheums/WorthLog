@@ -1,6 +1,7 @@
 import type { DashboardData } from '../api/types';
 import { formatMoney, formatSnapshotDate } from '../lib/format';
 import { ChangeValue } from './ChangeValue';
+import { PrivacyValue } from './PrivacyValue';
 import './SummaryCards.css';
 
 interface SummaryCardsProps {
@@ -16,7 +17,13 @@ export function SummaryCards({ data, currency }: SummaryCardsProps) {
       <article className="summary-card">
         <h2 className="summary-card__label">Total value</h2>
         <p className="summary-card__value">
-          {hasRangeData ? formatMoney(data.currentTotalCents, currency) : '—'}
+          {hasRangeData ? (
+            <PrivacyValue>
+              {formatMoney(data.currentTotalCents, currency)}
+            </PrivacyValue>
+          ) : (
+            '—'
+          )}
         </p>
       </article>
 

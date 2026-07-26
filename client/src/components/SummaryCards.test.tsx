@@ -1,11 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { dashboardFixture, emptyDashboardFixture } from '../test/fixtures';
+import { renderWithProviders } from '../test/render';
 import { SummaryCards } from './SummaryCards';
 
 describe('SummaryCards', () => {
   it('renders change and since-first percentages from API fields', () => {
-    render(<SummaryCards data={dashboardFixture} currency="EUR" />);
+    renderWithProviders(<SummaryCards data={dashboardFixture} currency="EUR" />);
 
     expect(screen.getByText('Total value')).toBeInTheDocument();
     expect(screen.getByText('€120.00')).toBeInTheDocument();
@@ -16,7 +17,7 @@ describe('SummaryCards', () => {
   });
 
   it('shows em dashes when the selected range has no points', () => {
-    render(
+    renderWithProviders(
       <SummaryCards
         data={{
           ...emptyDashboardFixture,
@@ -31,7 +32,7 @@ describe('SummaryCards', () => {
   });
 
   it('does not invent Infinity when percent fields are null', () => {
-    render(
+    renderWithProviders(
       <SummaryCards
         data={{
           ...dashboardFixture,

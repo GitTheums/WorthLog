@@ -17,11 +17,13 @@ import {
   putSnapshot,
 } from '../api/client';
 import type { Category, DashboardData } from '../api/types';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { formatMoney, formatSnapshotDate } from '../lib/format';
 import { formatCentsInput, parseMoneyInput, sumCents } from '../lib/money';
 import { getCategoryIcon } from '../lib/icons';
 import { ConfirmDialog } from './ConfirmDialog';
+import { PrivacyValue } from './PrivacyValue';
 import './SnapshotModal.css';
 
 export type SnapshotModalMode = 'add' | 'edit';
@@ -109,6 +111,8 @@ export function SnapshotModal({
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const isEdit = mode === 'edit';
+
+  useBodyScrollLock(open);
 
   useFocusTrap({
     open,
@@ -554,9 +558,13 @@ export function SnapshotModal({
                 <span id={totalId}>Live total</span>
                 <strong aria-labelledby={totalId}>
                   {parsedValues.centsByCategory.size === categories.length &&
-                  categories.length > 0
-                    ? formatMoney(liveTotalCents, currency)
-                    : '—'}
+                  categories.length > 0 ? (
+                    <PrivacyValue>
+                      {formatMoney(liveTotalCents, currency)}
+                    </PrivacyValue>
+                  ) : (
+                    '—'
+                  )}
                 </strong>
               </div>
 

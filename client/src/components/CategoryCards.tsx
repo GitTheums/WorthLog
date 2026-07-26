@@ -1,6 +1,7 @@
 import type { DashboardData } from '../api/types';
 import { formatMoney, formatSharePercent } from '../lib/format';
 import { getCategoryIcon } from '../lib/icons';
+import { PrivacyValue } from './PrivacyValue';
 import './CategoryCards.css';
 
 interface CategoryCardsProps {
@@ -38,7 +39,9 @@ export function CategoryCards({ data, currency }: CategoryCardsProps) {
               <h2 className="category-card__name">{category.name}</h2>
             </div>
             <p className="category-card__value">
-              {formatMoney(category.amountCents, currency)}
+              <PrivacyValue>
+                {formatMoney(category.amountCents, currency)}
+              </PrivacyValue>
             </p>
             <div className="category-card__meta">
               <div

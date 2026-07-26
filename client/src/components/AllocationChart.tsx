@@ -1,6 +1,8 @@
 import { Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { DashboardData } from '../api/types';
 import { formatMoney, formatSharePercent } from '../lib/format';
+import { usePrivacyModeContext } from '../privacy/PrivacyModeContext';
+import { PrivacyValue } from './PrivacyValue';
 import './AllocationChart.css';
 
 interface AllocationChartProps {
@@ -21,10 +23,12 @@ function AllocationTooltip({
   active,
   payload,
   currency,
+  privacyHidden,
 }: {
   active?: boolean;
   payload?: TooltipPayloadItem[];
   currency: string;
+  privacyHidden: boolean;
 }) {
   const item = payload?.[0];
   if (!active || !item?.name || item.value === undefined || !item.payload) {
@@ -35,7 +39,11 @@ function AllocationTooltip({
     <div className="chart-tooltip">
       <p className="chart-tooltip__date">{item.name}</p>
       <p className="chart-tooltip__value">
-        {formatMoney(item.value, currency)}
+        {privacyHidden ? (
+          'Value hidden'
+        ) : (
+          formatMoney(item.value, currency)
+        )}
         <span className="allocation-tooltip__percent">
           {formatSharePercent(item.payload.percent)}
         </span>
@@ -45,6 +53,7 @@ function AllocationTooltip({
 }
 
 export function AllocationChart({ data, currency }: AllocationChartProps) {
+  const { hidden: privacyHidden } = usePrivacyModeContext();
   const slices = data.latestAllocation
     .filter((item) => item.amountCents > 0)
     .map((item) => ({
@@ -80,7 +89,15 @@ export function AllocationChart({ data, currency }: AllocationChartProps) {
                   stroke="var(--card)"
                   strokeWidth={2}
                 />
-                <Tooltip content={<AllocationTooltip currency={currency} />} />
+                <Tooltip
+                  allowEscapeViewBox={{ x: true, y: true }}
+                  content={
+                    <AllocationTooltip
+                      currency={currency}
+                      privacyHidden={privacyHidden}
+                    />
+                  }
+                />
                 <text
                   x="50%"
                   y="46%"
@@ -95,7 +112,9 @@ export function AllocationChart({ data, currency }: AllocationChartProps) {
                   textAnchor="middle"
                   className="allocation-chart__center-value"
                 >
-                  {formatMoney(centerTotal, currency)}
+                  {privacyHidden
+                    ? '••••••'
+                    : formatMoney(centerTotal, currency)}
                 </text>
               </PieChart>
             </ResponsiveContainer>
@@ -112,7 +131,9 @@ export function AllocationChart({ data, currency }: AllocationChartProps) {
                 <span className="allocation-chart__legend-name">{item.name}</span>
                 <span className="allocation-chart__legend-meta">
                   <span className="allocation-chart__legend-money">
-                    {formatMoney(item.amountCents, currency)}
+                    <PrivacyValue>
+                      {formatMoney(item.amountCents, currency)}
+                    </PrivacyValue>
                   </span>
                   <span className="allocation-chart__legend-value">
                     {formatSharePercent(item.percent)}

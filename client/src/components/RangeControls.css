@@ -43,3 +43,15 @@
   background: var(--card-raised);
   box-shadow: none;
 }
+
+@media (max-width: 767px) {
+  .range-controls {
+    width: max-content;
+    max-width: 100%;
+  }
+
+  .range-controls__button {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}

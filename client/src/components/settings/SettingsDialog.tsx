@@ -36,6 +36,7 @@ import type {
   CategoryDeletionImpact,
   DashboardRange,
 } from '../../api/types';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import {
   buildBackupFilename,
@@ -125,6 +126,8 @@ export function SettingsDialog({
   const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
   const [deletingCategory, setDeletingCategory] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  useBodyScrollLock(open);
 
   useFocusTrap({
     open: open && !importConfirmOpen && deleteTarget === null,

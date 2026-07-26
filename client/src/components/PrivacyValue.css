@@ -1,0 +1,21 @@
+.privacy-value {
+  display: inline-block;
+  max-width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.privacy-value--hidden {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+.privacy-value__mask {
+  display: inline-block;
+  min-width: 4.5ch;
+  letter-spacing: 0.12em;
+  color: var(--text-secondary);
+  filter: blur(0.35px);
+  opacity: 0.92;
+}

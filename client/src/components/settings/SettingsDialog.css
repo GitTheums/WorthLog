@@ -345,3 +345,103 @@
   opacity: 0;
   pointer-events: none;
 }
+
+@media (max-width: 767px) {
+  .settings-dialog {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .settings-dialog__panel {
+    width: 100%;
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0;
+  }
+
+  .settings-dialog__header {
+    padding: max(var(--space-4), env(safe-area-inset-top))
+      max(var(--space-4), env(safe-area-inset-right))
+      var(--space-3)
+      max(var(--space-4), env(safe-area-inset-left));
+  }
+
+  .settings-dialog__tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
+  }
+
+  .settings-dialog__tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-height: 2.75rem;
+  }
+
+  .settings-dialog__body {
+    padding: var(--space-4);
+    padding-bottom: max(var(--space-6), env(safe-area-inset-bottom));
+  }
+
+  .settings-toolbar {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .settings-toolbar .settings-button--primary {
+    width: 100%;
+    justify-content: center;
+    min-height: 2.75rem;
+  }
+
+  .settings-category {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      'icon info'
+      'actions actions';
+  }
+
+  .settings-category__icon {
+    grid-area: icon;
+  }
+
+  .settings-category > div:nth-child(2) {
+    grid-area: info;
+    min-width: 0;
+  }
+
+  .settings-category__actions {
+    grid-area: actions;
+    justify-content: flex-start;
+  }
+
+  .settings-button {
+    min-height: 2.75rem;
+  }
+
+  .settings-field input,
+  .settings-field select {
+    font-size: 16px;
+    min-height: 2.75rem;
+  }
+
+  .settings-icon-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .settings-icon-option {
+    min-height: 2.75rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1099px) {
+  .settings-dialog__panel {
+    width: min(720px, 100%);
+  }
+
+  .settings-icon-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}

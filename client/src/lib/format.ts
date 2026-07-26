@@ -129,3 +129,39 @@ export function changeTone(amountCents: number | null): ChangeTone {
   }
   return amountCents > 0 ? 'positive' : 'negative';
 }
+
+/** Percent change between two totals; null when previous is missing or zero. */
+export function percentChange(
+  currentCents: number,
+  previousCents: number | null,
+): number | null {
+  if (previousCents === null || previousCents === 0) {
+    return null;
+  }
+
+  return ((currentCents - previousCents) / previousCents) * 100;
+}
+
+/** Compact axis ticks for narrow viewports. */
+export function formatChartTickCompact(
+  date: string,
+  index: number,
+  total: number,
+): string {
+  if (total <= 0) {
+    return '';
+  }
+
+  if (total === 1) {
+    return format(parseISO(date), 'd MMM');
+  }
+
+  if (total <= 5) {
+    return format(parseISO(date), 'MMM d');
+  }
+
+  const step = Math.max(1, Math.ceil(total / 4));
+  return index % step === 0 || index === total - 1
+    ? format(parseISO(date), 'MMM d')
+    : '';
+}

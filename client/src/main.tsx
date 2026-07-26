@@ -1,7 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { applyPrivacyMode, readPrivacyMode } from './lib/privacy';
 import './index.css';
+
+// Theme/privacy bootstrapping also runs inline in index.html to avoid flashes.
+applyPrivacyMode(readPrivacyMode());
 
 const storedTheme = window.localStorage.getItem('worthlog-theme');
 const initialTheme =

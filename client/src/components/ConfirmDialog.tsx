@@ -1,11 +1,12 @@
-import { useId, useRef, type RefObject } from 'react';
+import { useId, useRef, type ReactNode, type RefObject } from 'react';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import './ConfirmDialog.css';
 
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
-  description: string;
+  description: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   tone?: 'default' | 'danger';
@@ -30,6 +31,8 @@ export function ConfirmDialog({
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descriptionId = useId();
+
+  useBodyScrollLock(open);
 
   useFocusTrap({
     open,
@@ -72,9 +75,9 @@ export function ConfirmDialog({
         <h2 id={titleId} className="confirm-dialog__title">
           {title}
         </h2>
-        <p id={descriptionId} className="confirm-dialog__description">
+        <div id={descriptionId} className="confirm-dialog__description">
           {description}
-        </p>
+        </div>
         <div className="confirm-dialog__actions">
           <button
             type="button"

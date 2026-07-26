@@ -1,6 +1,13 @@
 import { Pencil, Trash2 } from 'lucide-react';
 import type { DashboardData } from '../api/types';
-import { formatMoney, formatSnapshotDate } from '../lib/format';
+import { useIsMobileLayout } from '../hooks/useMediaQuery';
+import {
+  formatMoney,
+  formatSnapshotDate,
+  percentChange,
+} from '../lib/format';
+import { ChangeValue } from './ChangeValue';
+import { PrivacyValue } from './PrivacyValue';
 import './HistoryTable.css';
 
 interface HistoryTableProps {
@@ -16,6 +23,8 @@ export function HistoryTable({
   onEdit,
   onDelete,
 }: HistoryTableProps) {
+  const isMobile = useIsMobileLayout();
+
   const categoryMeta = new Map<
     string,
     { name: string; color: string }
@@ -69,99 +78,182 @@ export function HistoryTable({
         <div>
           <h2 className="history-table__title">History</h2>
           <p className="history-table__subtitle">
-            Newest first · missing category values shown as {formatMoney(0, currency)}
+            Newest first · missing category values shown as{' '}
+            <PrivacyValue>{formatMoney(0, currency)}</PrivacyValue>
           </p>
         </div>
       </div>
 
-      <div className="history-table__scroll" tabIndex={0}>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Date</th>
-              <th scope="col">Total</th>
-              {categoryIds.map((categoryId) => (
-                <th key={categoryId} scope="col">
-                  <span className="history-table__category-head">
-                    <span
-                      className="history-table__swatch"
-                      style={{
-                        background: categoryMeta.get(categoryId)?.color,
-                      }}
-                      aria-hidden="true"
-                    />
-                    {categoryMeta.get(categoryId)?.name}
-                  </span>
-                </th>
-              ))}
-              <th scope="col">Note</th>
-              <th scope="col">
-                <span className="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.historyRows.map((row) => {
-              const valuesByCategory = new Map(
-                row.values.map((value) => [value.categoryId, value.amountCents]),
-              );
+      {isMobile ? (
+        <ul className="history-cards">
+          {data.historyRows.map((row, index) => {
+            const previous = data.historyRows[index + 1];
+            const changeCents =
+              previous === undefined
+                ? null
+                : row.totalValueCents - previous.totalValueCents;
+            const changePct =
+              previous === undefined
+                ? null
+                : percentChange(row.totalValueCents, previous.totalValueCents);
 
-              return (
-                <tr key={row.date}>
-                  <th scope="row">{formatSnapshotDate(row.date)}</th>
-                  <td className="history-table__total">
-                    {formatMoney(row.totalValueCents, currency)}
-                  </td>
-                  {categoryIds.map((categoryId) => {
-                    const amount = valuesByCategory.get(categoryId) ?? 0;
-                    return (
-                      <td
-                        key={`${row.date}-${categoryId}`}
-                        className={
-                          amount === 0
-                            ? 'history-table__zero'
-                            : undefined
-                        }
+            return (
+              <li key={row.date} className="history-card">
+                <div className="history-card__top">
+                  <h3 className="history-card__date">
+                    {formatSnapshotDate(row.date)}
+                  </h3>
+                  <p className="history-card__total">
+                    <PrivacyValue>
+                      {formatMoney(row.totalValueCents, currency)}
+                    </PrivacyValue>
+                  </p>
+                </div>
+
+                <div className="history-card__change">
+                  {changeCents === null ? (
+                    <span className="history-card__change-empty">
+                      First in range
+                    </span>
+                  ) : (
+                    <ChangeValue
+                      amountCents={changeCents}
+                      percent={changePct}
+                      currency={currency}
+                    />
+                  )}
+                </div>
+
+                {row.note ? (
+                  <p className="history-card__note">{row.note}</p>
+                ) : null}
+
+                <div className="history-card__actions">
+                  <button
+                    type="button"
+                    className="history-table__action"
+                    aria-label={`Edit snapshot for ${formatSnapshotDate(row.date)}`}
+                    onClick={(event) => {
+                      onEdit(row.date, event.currentTarget);
+                    }}
+                  >
+                    <Pencil size={15} strokeWidth={1.8} aria-hidden="true" />
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="history-table__action history-table__action--danger"
+                    aria-label={`Delete snapshot for ${formatSnapshotDate(row.date)}`}
+                    onClick={(event) => {
+                      onDelete(
+                        row.date,
+                        row.totalValueCents,
+                        event.currentTarget,
+                      );
+                    }}
+                  >
+                    <Trash2 size={15} strokeWidth={1.8} aria-hidden="true" />
+                    Delete
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <div className="history-table__scroll" tabIndex={0}>
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Total</th>
+                {categoryIds.map((categoryId) => (
+                  <th key={categoryId} scope="col">
+                    <span className="history-table__category-head">
+                      <span
+                        className="history-table__swatch"
+                        style={{
+                          background: categoryMeta.get(categoryId)?.color,
+                        }}
+                        aria-hidden="true"
+                      />
+                      {categoryMeta.get(categoryId)?.name}
+                    </span>
+                  </th>
+                ))}
+                <th scope="col">Note</th>
+                <th scope="col">
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.historyRows.map((row) => {
+                const valuesByCategory = new Map(
+                  row.values.map((value) => [value.categoryId, value.amountCents]),
+                );
+
+                return (
+                  <tr key={row.date}>
+                    <th scope="row">{formatSnapshotDate(row.date)}</th>
+                    <td className="history-table__total">
+                      <PrivacyValue>
+                        {formatMoney(row.totalValueCents, currency)}
+                      </PrivacyValue>
+                    </td>
+                    {categoryIds.map((categoryId) => {
+                      const amount = valuesByCategory.get(categoryId) ?? 0;
+                      return (
+                        <td
+                          key={`${row.date}-${categoryId}`}
+                          className={
+                            amount === 0
+                              ? 'history-table__zero'
+                              : undefined
+                          }
+                        >
+                          <PrivacyValue>
+                            {formatMoney(amount, currency)}
+                          </PrivacyValue>
+                        </td>
+                      );
+                    })}
+                    <td className="history-table__note">{row.note ?? '—'}</td>
+                    <td className="history-table__actions">
+                      <button
+                        type="button"
+                        className="history-table__action"
+                        aria-label={`Edit snapshot for ${formatSnapshotDate(row.date)}`}
+                        onClick={(event) => {
+                          onEdit(row.date, event.currentTarget);
+                        }}
                       >
-                        {formatMoney(amount, currency)}
-                      </td>
-                    );
-                  })}
-                  <td className="history-table__note">{row.note ?? '—'}</td>
-                  <td className="history-table__actions">
-                    <button
-                      type="button"
-                      className="history-table__action"
-                      aria-label={`Edit snapshot for ${formatSnapshotDate(row.date)}`}
-                      onClick={(event) => {
-                        onEdit(row.date, event.currentTarget);
-                      }}
-                    >
-                      <Pencil size={15} strokeWidth={1.8} aria-hidden="true" />
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="history-table__action history-table__action--danger"
-                      aria-label={`Delete snapshot for ${formatSnapshotDate(row.date)}`}
-                      onClick={(event) => {
-                        onDelete(
-                          row.date,
-                          row.totalValueCents,
-                          event.currentTarget,
-                        );
-                      }}
-                    >
-                      <Trash2 size={15} strokeWidth={1.8} aria-hidden="true" />
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                        <Pencil size={15} strokeWidth={1.8} aria-hidden="true" />
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="history-table__action history-table__action--danger"
+                        aria-label={`Delete snapshot for ${formatSnapshotDate(row.date)}`}
+                        onClick={(event) => {
+                          onDelete(
+                            row.date,
+                            row.totalValueCents,
+                            event.currentTarget,
+                          );
+                        }}
+                      >
+                        <Trash2 size={15} strokeWidth={1.8} aria-hidden="true" />
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }

@@ -19,10 +19,15 @@ describe('production static and SPA fallback', () => {
     clientDistDir = mkdtempSync(join(tmpdir(), 'worthlog-static-client-'));
     writeFileSync(
       join(clientDistDir, 'index.html'),
-      '<!doctype html><html><body>Worthlog SPA</body></html>\n',
+      '<!doctype html><html><head><link rel="icon" href="/favicon.svg" type="image/svg+xml" /><title>Worthlog</title></head><body>Worthlog SPA</body></html>\n',
       'utf8',
     );
     writeFileSync(join(clientDistDir, 'app.js'), 'console.log("ok");\n', 'utf8');
+    writeFileSync(
+      join(clientDistDir, 'favicon.svg'),
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>\n',
+      'utf8',
+    );
 
     db = openDatabase(dataDir);
     app = createApp(db, { dataDir, clientDistDir });
@@ -43,9 +48,14 @@ describe('production static and SPA fallback', () => {
     expect(asset.status).toBe(200);
     expect(asset.text).toContain('console.log');
 
+    const favicon = await request(app).get('/favicon.svg');
+    expect(favicon.status).toBe(200);
+    expect(favicon.headers['content-type']).toMatch(/svg|xml/i);
+
     const spa = await request(app).get('/settings');
     expect(spa.status).toBe(200);
     expect(spa.text).toContain('Worthlog SPA');
+    expect(spa.text).toContain('/favicon.svg');
 
     const missingApi = await request(app).get('/api/does-not-exist');
     expect(missingApi.status).toBe(404);
