@@ -29,6 +29,13 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+    },
+  },
+  {
+    // Fast Refresh only applies to React component modules, not test utilities.
+    files: ['client/**/*.tsx'],
+    ignores: ['client/src/test/**'],
+    rules: {
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

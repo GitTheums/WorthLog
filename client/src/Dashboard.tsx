@@ -21,13 +21,13 @@ import { PrivacyValue } from './components/PrivacyValue';
 import { SummaryCards } from './components/SummaryCards';
 import { Toast, type ToastMessage } from './components/Toast';
 import { TotalValueChart } from './components/TotalValueChart';
-import { useAuth } from './auth/AuthContext';
+import { useAuth } from './auth/useAuth';
 import { useDashboard } from './hooks/useDashboard';
 import { useSettings } from './hooks/useSettings';
 import { useTheme } from './hooks/useTheme';
 import { formatMoney, formatSnapshotDate } from './lib/format';
 import { createClientId } from './lib/id';
-import { usePrivacyModeContext } from './privacy/PrivacyModeContext';
+import { usePrivacyModeContext } from './privacy/usePrivacyModeContext';
 import './Dashboard.css';
 
 interface DeleteTarget {

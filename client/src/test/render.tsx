@@ -1,6 +1,6 @@
 import { render, type RenderOptions } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
-import { PrivacyModeProvider } from '../privacy/PrivacyModeContext';
+import { PrivacyModeProvider } from '../privacy/PrivacyModeProvider';
 
 function Providers({ children }: { children: ReactNode }) {
   return <PrivacyModeProvider>{children}</PrivacyModeProvider>;

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type SyntheticEvent } from 'react';
 import { ApiError, getApiErrorRetryAfterSeconds } from '../api/client';
 import { BrandMark } from '../components/BrandMark';
-import { useAuth } from './AuthContext';
+import { useAuth } from './useAuth';
 import './LockScreen.css';
 
 export function LockScreen() {

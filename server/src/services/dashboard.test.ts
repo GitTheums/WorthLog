@@ -226,10 +226,159 @@ describe('dashboard calculations', () => {
     expect(dashboard.changeCents).toBeNull();
   });
 
-  it('returns empty dashboard when there are no snapshots at all', () => {
+  it('orders dashboard categories by newest complete-portfolio values descending', () => {
+    seedSnapshot(ctx.db, '2026-01-01', {
+      Crypto: 1_000,
+      Stocks: 1_000,
+      Pokémon: 1_000,
+      'CS2 Skins': 1_000,
+    });
+    seedSnapshot(ctx.db, '2026-07-01', {
+      Crypto: 83_100,
+      Stocks: 7_600,
+      Pokémon: 7_300,
+      'CS2 Skins': 2_000,
+    });
+
+    const dashboard = getDashboard(ctx.db, 'all');
+    const names = dashboard.latestCategoryValues.map((item) => item.name);
+
+    expect(dashboard.categoryDisplayOrder).toEqual(
+      dashboard.latestCategoryValues.map((item) => item.categoryId),
+    );
+    expect(names).toEqual(['Crypto', 'Stocks', 'Pokémon', 'CS2 Skins']);
+    expect(dashboard.latestAllocation.map((item) => item.name)).toEqual(names);
+    expect(dashboard.categoryTimeSeries.map((item) => item.name)).toEqual(names);
+    expect(
+      dashboard.latestAllocation.map((item) => item.percent),
+    ).toEqual([
+      expect.closeTo(83.1, 1),
+      expect.closeTo(7.6, 1),
+      expect.closeTo(7.3, 1),
+      expect.closeTo(2.0, 1),
+    ]);
+  });
+
+  it('keeps canonical order when the selected range excludes the newest snapshot', () => {
+    seedSnapshot(ctx.db, '2026-01-01', {
+      Crypto: 10_000,
+      Stocks: 1_000,
+      Pokémon: 500,
+      'CS2 Skins': 100,
+    });
+    seedSnapshot(ctx.db, '2026-03-01', {
+      Crypto: 1_000,
+      Stocks: 50_000,
+      Pokémon: 500,
+      'CS2 Skins': 100,
+    });
+    seedSnapshot(ctx.db, '2026-07-01', {
+      Crypto: 83_100,
+      Stocks: 7_600,
+      Pokémon: 7_300,
+      'CS2 Skins': 2_000,
+    });
+
+    // 1m ending 2027-01-15 excludes every snapshot, including July (newest).
+    const emptyRange = getDashboard(
+      ctx.db,
+      '1m',
+      new Date('2027-01-15T12:00:00.000Z'),
+    );
+
+    expect(emptyRange.timeSeries).toEqual([]);
+    expect(emptyRange.latestCategoryValues).toEqual([]);
+    // Order still follows complete-portfolio newest (July Crypto-led).
+    const named = emptyRange.categoryDisplayOrder.map((id) => {
+      const row = ctx.db
+        .prepare(`SELECT name FROM categories WHERE id = ?`)
+        .get(id) as { name: string };
+      return row.name;
+    });
+    expect(named).toEqual(['Crypto', 'Stocks', 'Pokémon', 'CS2 Skins']);
+
+    // Switching to All keeps the same canonical IDs/order.
+    const allRange = getDashboard(ctx.db, 'all');
+    expect(allRange.categoryDisplayOrder).toEqual(
+      emptyRange.categoryDisplayOrder,
+    );
+  });
+
+  it('places zero-value categories after positive ones and uses sortOrder ties', () => {
+    seedSnapshot(ctx.db, '2026-07-01', {
+      Crypto: 0,
+      Stocks: 5_000,
+      Pokémon: 5_000,
+      'CS2 Skins': 1_000,
+    });
+
+    const dashboard = getDashboard(ctx.db, 'all');
+    const names = dashboard.latestCategoryValues.map((item) => item.name);
+
+    // Stocks and Pokémon are equal; fixture order is Crypto, Stocks, Pokémon, CS2
+    // with sortOrder Crypto=0, Stocks=1, Pokémon=2, CS2=3 after ensureMultiCategoryFixture.
+    expect(names).toEqual(['Stocks', 'Pokémon', 'CS2 Skins', 'Crypto']);
+  });
+
+  it('preserves category colors by id after value sorting', () => {
+    seedSnapshot(ctx.db, '2026-07-01', {
+      Crypto: 83_100,
+      Stocks: 7_600,
+      Pokémon: 7_300,
+      'CS2 Skins': 2_000,
+    });
+
+    const dashboard = getDashboard(ctx.db, 'all');
+    const crypto = dashboard.latestAllocation.find(
+      (item) => item.name === 'Crypto',
+    );
+    expect(crypto?.color).toBe('#7C5CFC');
+    expect(dashboard.categoryTimeSeries[0]?.color).toBe('#7C5CFC');
+  });
+
+  it('falls back to manual sortOrder when there are no snapshots', () => {
     const dashboard = getDashboard(ctx.db, 'all');
     expect(dashboard.hasSnapshots).toBe(false);
-    expect(dashboard.firstTotalCents).toBeNull();
+    expect(dashboard.categoryDisplayOrder).toHaveLength(4);
+    // Multi-category fixture order: Crypto, Stocks, Pokémon, CS2 Skins
+    const named = dashboard.categoryDisplayOrder.map((id) => {
+      const row = ctx.db
+        .prepare(`SELECT name FROM categories WHERE id = ?`)
+        .get(id) as { name: string };
+      return row.name;
+    });
+    expect(named).toEqual(['Crypto', 'Stocks', 'Pokémon', 'CS2 Skins']);
+  });
+
+  it('keeps history values under the correct category columns after reordering', () => {
+    seedSnapshot(ctx.db, '2026-01-01', {
+      Crypto: 1_000,
+      Stocks: 50_000,
+      Pokémon: 500,
+      'CS2 Skins': 100,
+    });
+    seedSnapshot(ctx.db, '2026-07-01', {
+      Crypto: 83_100,
+      Stocks: 7_600,
+      Pokémon: 7_300,
+      'CS2 Skins': 2_000,
+    });
+
+    const dashboard = getDashboard(ctx.db, 'all');
+    const order = dashboard.categoryDisplayOrder;
+    expect(
+      dashboard.latestCategoryValues.map((item) => item.name),
+    ).toEqual(['Crypto', 'Stocks', 'Pokémon', 'CS2 Skins']);
+
+    const oldest = dashboard.historyRows.find((row) => row.date === '2026-01-01');
+    expect(oldest).toBeDefined();
+    const amountsInColumnOrder = order.map(
+      (categoryId) =>
+        oldest?.values.find((value) => value.categoryId === categoryId)
+          ?.amountCents ?? null,
+    );
+    // Historical Stocks was largest on that date, but columns follow July order.
+    expect(amountsInColumnOrder).toEqual([1_000, 50_000, 500, 100]);
   });
 
   it('supports a single snapshot without inventing a previous point', () => {

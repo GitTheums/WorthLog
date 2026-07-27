@@ -544,8 +544,8 @@ describe('snapshot workflow', () => {
     const dialog = await openAddModal(user);
     await within(dialog).findByLabelText('Crypto');
 
-    expect(within(dialog).getByLabelText('Crypto')).toHaveValue('30.00');
-    expect(within(dialog).getByLabelText('Stocks')).toHaveValue('30.00');
+    expect(within(dialog).getByLabelText('Crypto')).toHaveValue('83.10');
+    expect(within(dialog).getByLabelText('Stocks')).toHaveValue('22.80');
   });
 
   it('shows a first-snapshot helper callout with one category and no history', async () => {
@@ -650,5 +650,75 @@ describe('snapshot workflow', () => {
     expect(
       await screen.findByRole('dialog', { name: 'Settings' }),
     ).toBeInTheDocument();
+  });
+
+  it('keeps Add snapshot fields in manual sortOrder, not value order', async () => {
+    mockApi({
+      dashboard: dashboardFixture,
+      snapshotsByDate: {},
+      categories: [
+        {
+          id: 'cat-skins',
+          name: 'CS2 Skins',
+          color: '#EF4444',
+          icon: 'Crosshair',
+          sortOrder: 0,
+          archivedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+        {
+          id: 'cat-crypto',
+          name: 'Crypto',
+          color: '#7C5CFC',
+          icon: 'Bitcoin',
+          sortOrder: 1,
+          archivedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+        {
+          id: 'cat-stocks',
+          name: 'Stocks',
+          color: '#2563EB',
+          icon: 'ChartNoAxesCombined',
+          sortOrder: 2,
+          archivedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+        {
+          id: 'cat-pokemon',
+          name: 'Pokémon',
+          color: '#F59E0B',
+          icon: 'Sparkles',
+          sortOrder: 3,
+          archivedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    });
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByRole('heading', { name: 'History' });
+
+    const dialog = await openAddModal(user);
+    const cs2 = await within(dialog).findByLabelText('CS2 Skins');
+    const crypto = within(dialog).getByLabelText('Crypto');
+    const stocks = within(dialog).getByLabelText('Stocks');
+    const pokemon = within(dialog).getByLabelText('Pokémon');
+
+    // Manual sortOrder puts CS2 before Crypto even though Crypto has the largest value.
+    expect(
+      cs2.compareDocumentPosition(crypto) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      crypto.compareDocumentPosition(stocks) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      stocks.compareDocumentPosition(pokemon) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });

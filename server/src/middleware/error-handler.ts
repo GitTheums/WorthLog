@@ -9,6 +9,7 @@ import {
 } from '../db/errors.js';
 import { HttpError } from '../http/errors.js';
 import { sendError } from '../http/response.js';
+import { consoleLogger, type AppLogger } from '../logging.js';
 
 function zodDetails(error: ZodError): unknown {
   return error.issues.map((issue) => ({
@@ -28,91 +29,102 @@ function isExpressBodySyntaxError(
   );
 }
 
-export function errorHandler(
-  error: unknown,
-  _req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
-  if (res.headersSent) {
-    next(error);
-    return;
-  }
+export function createErrorHandler(logger: AppLogger = consoleLogger) {
+  return function errorHandler(
+    error: unknown,
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ): void {
+    if (res.headersSent) {
+      next(error);
+      return;
+    }
 
-  const exposeDetails = process.env['NODE_ENV'] !== 'production';
+    const exposeDetails = process.env['NODE_ENV'] !== 'production';
 
-  if (isExpressBodySyntaxError(error)) {
-    sendError(res, 400, 'INVALID_JSON', 'Request body must be valid JSON');
-    return;
-  }
+    if (isExpressBodySyntaxError(error)) {
+      sendError(res, 400, 'INVALID_JSON', 'Request body must be valid JSON');
+      return;
+    }
 
-  if (error instanceof HttpError) {
+    if (error instanceof HttpError) {
+      sendError(
+        res,
+        error.statusCode,
+        error.code,
+        error.message,
+        error.details,
+      );
+      return;
+    }
+
+    if (error instanceof ZodError) {
+      sendError(
+        res,
+        400,
+        'VALIDATION_ERROR',
+        'Request validation failed',
+        zodDetails(error),
+      );
+      return;
+    }
+
+    if (
+      error instanceof CategoryNotFoundError ||
+      error instanceof SnapshotNotFoundError
+    ) {
+      sendError(res, 404, error.code, error.message);
+      return;
+    }
+
+    if (error instanceof UniqueConstraintError) {
+      sendError(res, 409, error.code, error.message);
+      return;
+    }
+
+    if (error instanceof ValidationError) {
+      sendError(res, 400, error.code, error.message);
+      return;
+    }
+
+    if (error instanceof DatabaseError) {
+      sendError(res, 400, error.code, error.message);
+      return;
+    }
+
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      typeof error.code === 'string' &&
+      error.code.startsWith('SQLITE_CONSTRAINT')
+    ) {
+      logger.error(error);
+      sendError(
+        res,
+        400,
+        'CONSTRAINT_ERROR',
+        exposeDetails && error instanceof Error
+          ? error.message
+          : 'Database constraint failed',
+      );
+      return;
+    }
+
+    logger.error(error);
+
+    const message =
+      error instanceof Error ? error.message : 'Unexpected server error';
+
     sendError(
       res,
-      error.statusCode,
-      error.code,
-      error.message,
-      error.details,
+      500,
+      'INTERNAL_SERVER_ERROR',
+      exposeDetails ? message : 'Internal server error',
     );
-    return;
-  }
-
-  if (error instanceof ZodError) {
-    sendError(res, 400, 'VALIDATION_ERROR', 'Request validation failed', zodDetails(error));
-    return;
-  }
-
-  if (
-    error instanceof CategoryNotFoundError ||
-    error instanceof SnapshotNotFoundError
-  ) {
-    sendError(res, 404, error.code, error.message);
-    return;
-  }
-
-  if (error instanceof UniqueConstraintError) {
-    sendError(res, 409, error.code, error.message);
-    return;
-  }
-
-  if (error instanceof ValidationError) {
-    sendError(res, 400, error.code, error.message);
-    return;
-  }
-
-  if (error instanceof DatabaseError) {
-    sendError(res, 400, error.code, error.message);
-    return;
-  }
-
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    typeof error.code === 'string' &&
-    error.code.startsWith('SQLITE_CONSTRAINT')
-  ) {
-    console.error(error);
-    sendError(
-      res,
-      400,
-      'CONSTRAINT_ERROR',
-      exposeDetails && error instanceof Error
-        ? error.message
-        : 'Database constraint failed',
-    );
-    return;
-  }
-
-  console.error(error);
-
-  const message =
-    error instanceof Error ? error.message : 'Unexpected server error';
-
-  sendError(
-    res,
-    500,
-    'INTERNAL_SERVER_ERROR',
-    exposeDetails ? message : 'Internal server error',
-  );
+  };
 }
+
+/** Default production error handler (console logging). */
+export const errorHandler = createErrorHandler();

@@ -9,6 +9,7 @@ import {
   seedSnapshot,
   type TestContext,
 } from '../test/helpers.js';
+import { createCapturingLogger } from '../test/logging.js';
 
 describe('backup API', () => {
   let ctx: TestContext;
@@ -82,6 +83,10 @@ describe('backup API', () => {
   });
 
   it('POST /api/backup/import rolls back when insertion fails', async () => {
+    const logger = createCapturingLogger();
+    ctx.cleanup();
+    ctx = createTestContext({ logger });
+
     seedSnapshot(ctx.db, '2026-01-01', 100);
     const exported = await request(ctx.app).get('/api/backup/export');
     const payload = structuredClone(exported.body.data);
@@ -101,5 +106,9 @@ describe('backup API', () => {
       beforeCategories,
     );
     expect(listSnapshotDetails(ctx.db)[0]?.date).toBe('2026-01-01');
+    expect(logger.errors).toHaveLength(1);
+    expect(logger.errors[0]).toMatchObject({
+      code: expect.stringMatching(/^SQLITE_CONSTRAINT/),
+    });
   });
 });

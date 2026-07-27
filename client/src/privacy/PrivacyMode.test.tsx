@@ -137,7 +137,7 @@ describe('privacy mode', () => {
     );
 
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
-    expect(screen.getByRole('list')).toBeInTheDocument();
+    expect(screen.getAllByRole('list').length).toBeGreaterThan(0);
     expect(screen.queryByText('€120.00')).not.toBeInTheDocument();
     expect(screen.getAllByText(/Monetary value hidden/).length).toBeGreaterThan(
       0,
@@ -185,7 +185,16 @@ describe('privacy mode', () => {
     await screen.findByRole('heading', { name: 'History' });
 
     const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
+    // Wait until the initial load settles so a late bootstrap request is not
+    // counted as a privacy-toggle refetch.
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.length).toBeGreaterThan(0);
+    });
     const callsBefore = fetchMock.mock.calls.length;
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+    expect(fetchMock.mock.calls.length).toBe(callsBefore);
 
     await user.click(
       screen.getByRole('button', { name: 'Hide monetary values' }),

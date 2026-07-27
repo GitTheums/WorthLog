@@ -2,7 +2,8 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import express from 'express';
-import { errorHandler } from './middleware/error-handler.js';
+import { consoleLogger, type AppLogger } from './logging.js';
+import { createErrorHandler } from './middleware/error-handler.js';
 import {
   authPinRateLimiter,
   authStatusRateLimiter,
@@ -32,6 +33,8 @@ export interface AppOptions {
   trustProxy?: number | false;
   /** Optional rate limiter overrides (primarily for tests). */
   rateLimiters?: AppRateLimiters;
+  /** Optional logger (tests may inject spies / silent sinks). */
+  logger?: AppLogger;
 }
 
 function isApiPath(path: string): boolean {
@@ -49,6 +52,7 @@ const defaultRateLimiters: AppRateLimiters = {
 export function createApp(db: Database.Database, options: AppOptions) {
   const app = express();
   const requireUnlocked = createRequireUnlockedMiddleware(db);
+  const logger = options.logger ?? consoleLogger;
   const limiters = options.rateLimiters ?? defaultRateLimiters;
 
   app.disable('x-powered-by');
@@ -143,7 +147,7 @@ export function createApp(db: Database.Database, options: AppOptions) {
     });
   }
 
-  app.use(errorHandler);
+  app.use(createErrorHandler(logger));
 
   return app;
 }

@@ -1,10 +1,11 @@
 import { AuthBootScreen } from './auth/AuthBootScreen';
-import { AuthProvider, useAuth } from './auth/AuthContext';
+import { AuthProvider } from './auth/AuthProvider';
+import { useAuth } from './auth/useAuth';
 import { LockScreen } from './auth/LockScreen';
 import './auth/LockScreen.css';
 import { Dashboard } from './Dashboard';
 import { ErrorState } from './components/ErrorState';
-import { PrivacyModeProvider } from './privacy/PrivacyModeContext';
+import { PrivacyModeProvider } from './privacy/PrivacyModeProvider';
 
 function AuthenticatedApp() {
   const { loading, error, unlocked, refreshStatus } = useAuth();

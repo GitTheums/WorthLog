@@ -5,7 +5,7 @@ import {
   removePin,
   setupPin,
 } from '../../api/client';
-import { useAuth } from '../../auth/AuthContext';
+import { useAuth } from '../../auth/useAuth';
 
 interface SecuritySettingsProps {
   onToast: (tone: 'success' | 'error', message: string) => void;

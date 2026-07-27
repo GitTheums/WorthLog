@@ -17,7 +17,7 @@ import {
   formatMoney,
   formatSnapshotDate,
 } from '../lib/format';
-import { usePrivacyModeContext } from '../privacy/PrivacyModeContext';
+import { usePrivacyModeContext } from '../privacy/usePrivacyModeContext';
 import { RangeControls } from './RangeControls';
 import './TotalValueChart.css';
 

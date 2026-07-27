@@ -2,6 +2,10 @@ import type Database from 'better-sqlite3';
 import { listCategories } from '../db/repositories/categories.js';
 import { listSnapshotDetails } from '../db/repositories/snapshots.js';
 import type { DashboardRange, SnapshotWithDetails } from '../db/types.js';
+import {
+  getPortfolioCategoryDisplayOrder,
+  sortByCategoryDisplayOrder,
+} from './category-display-order.js';
 
 export interface DashboardResponse {
   range: DashboardRange;
@@ -15,6 +19,11 @@ export interface DashboardResponse {
   changeSinceFirstCents: number | null;
   changeSinceFirstPercent: number | null;
   latestDate: string | null;
+  /**
+   * Canonical dashboard category order (newest complete-portfolio snapshot):
+   * latestValueCents desc → sortOrder asc → name localeCompare.
+   */
+  categoryDisplayOrder: string[];
   timeSeries: Array<{ date: string; totalValueCents: number }>;
   categoryTimeSeries: Array<{
     categoryId: string;
@@ -97,6 +106,7 @@ function emptyDashboard(range: DashboardRange): DashboardResponse {
     changeSinceFirstCents: null,
     changeSinceFirstPercent: null,
     latestDate: null,
+    categoryDisplayOrder: [],
     timeSeries: [],
     categoryTimeSeries: [],
     latestAllocation: [],
@@ -120,7 +130,19 @@ export function getDashboard(
   const allSnapshots = sortByDateAsc(listSnapshotDetails(db));
 
   if (allSnapshots.length === 0) {
-    return emptyDashboard(range);
+    // No values yet: fall back to manual sortOrder → name.
+    const categories = listCategories(db, { includeArchived: true });
+    return {
+      ...emptyDashboard(range),
+      categoryDisplayOrder: getPortfolioCategoryDisplayOrder(
+        categories.map((category) => ({
+          id: category.id,
+          name: category.name,
+          sortOrder: category.sortOrder,
+          latestValueCents: 0,
+        })),
+      ),
+    };
   }
 
   const rangedSnapshots = from
@@ -135,11 +157,34 @@ export function getDashboard(
   const firstTotalCents = first.totalValueCents;
 
   if (rangedSnapshots.length === 0) {
+    const categories = listCategories(db, { includeArchived: true });
+    const portfolioLatest = allSnapshots[allSnapshots.length - 1];
+    const portfolioLatestValueById = new Map(
+      (portfolioLatest?.values ?? []).map((value) => [
+        value.categoryId,
+        value.amountCents,
+      ]),
+    );
+
     return {
       ...emptyDashboard(range),
       range,
       hasSnapshots: true,
       firstTotalCents,
+      categoryDisplayOrder: getPortfolioCategoryDisplayOrder(
+        categories
+          .filter((category) =>
+            allSnapshots.some((snapshot) =>
+              snapshot.values.some((value) => value.categoryId === category.id),
+            ),
+          )
+          .map((category) => ({
+            id: category.id,
+            name: category.name,
+            sortOrder: category.sortOrder,
+            latestValueCents: portfolioLatestValueById.get(category.id) ?? 0,
+          })),
+      ),
     };
   }
 
@@ -148,8 +193,8 @@ export function getDashboard(
     categories.map((category) => [category.id, category]),
   );
 
-  const latest = rangedSnapshots[rangedSnapshots.length - 1];
-  if (!latest) {
+  const latestInRange = rangedSnapshots[rangedSnapshots.length - 1];
+  if (!latestInRange) {
     return {
       ...emptyDashboard(range),
       range,
@@ -158,15 +203,34 @@ export function getDashboard(
     };
   }
 
+  // Ordering always uses the newest snapshot in the complete portfolio,
+  // even when the selected chart range excludes that date.
+  const portfolioLatest = allSnapshots[allSnapshots.length - 1];
+  if (!portfolioLatest) {
+    return {
+      ...emptyDashboard(range),
+      range,
+      hasSnapshots: true,
+      firstTotalCents,
+    };
+  }
+
+  const portfolioLatestValueById = new Map(
+    portfolioLatest.values.map((value) => [
+      value.categoryId,
+      value.amountCents,
+    ]),
+  );
+
   // Previous is the snapshot immediately before the newest-in-range item in
   // the complete ordered dataset (not calendar-day math, not range-scoped).
   const latestIndex = allSnapshots.findIndex(
-    (snapshot) => snapshot.id === latest.id,
+    (snapshot) => snapshot.id === latestInRange.id,
   );
   const previous =
     latestIndex > 0 ? allSnapshots[latestIndex - 1] : undefined;
 
-  const currentTotalCents = latest.totalValueCents;
+  const currentTotalCents = latestInRange.totalValueCents;
   const previousTotalCents = previous?.totalValueCents ?? null;
   const changeCents =
     previousTotalCents === null
@@ -186,13 +250,31 @@ export function getDashboard(
 
   // Categories with any values in the ranged history (including archived).
   // Missing values on a date are represented as zero (e.g. before a category existed).
-  const categoryTimeSeries = categories
-    .filter((category) =>
-      rangedSnapshots.some((snapshot) =>
-        snapshot.values.some((value) => value.categoryId === category.id),
-      ),
-    )
-    .map((category) => ({
+  const seriesCategories = categories.filter((category) =>
+    rangedSnapshots.some((snapshot) =>
+      snapshot.values.some((value) => value.categoryId === category.id),
+    ),
+  );
+
+  const displayCategoryIds = new Set<string>([
+    ...seriesCategories.map((category) => category.id),
+    ...latestInRange.values.map((value) => value.categoryId),
+  ]);
+
+  const categoryDisplayOrder = getPortfolioCategoryDisplayOrder(
+    [...displayCategoryIds].map((categoryId) => {
+      const category = categoryById.get(categoryId);
+      return {
+        id: categoryId,
+        name: category?.name ?? 'Unknown',
+        sortOrder: category?.sortOrder ?? Number.MAX_SAFE_INTEGER,
+        latestValueCents: portfolioLatestValueById.get(categoryId) ?? 0,
+      };
+    }),
+  );
+
+  const categoryTimeSeries = sortByCategoryDisplayOrder(
+    seriesCategories.map((category) => ({
       categoryId: category.id,
       name: category.name,
       color: category.color,
@@ -203,18 +285,23 @@ export function getDashboard(
           snapshot.values.find((value) => value.categoryId === category.id)
             ?.amountCents ?? 0,
       })),
-    }));
+    })),
+    categoryDisplayOrder,
+  );
 
-  const latestCategoryValues = latest.values.map((value) => {
-    const category = categoryById.get(value.categoryId);
-    return {
-      categoryId: value.categoryId,
-      name: category?.name ?? 'Unknown',
-      color: category?.color ?? '#666666',
-      icon: category?.icon ?? 'Circle',
-      amountCents: value.amountCents,
-    };
-  });
+  const latestCategoryValues = sortByCategoryDisplayOrder(
+    latestInRange.values.map((value) => {
+      const category = categoryById.get(value.categoryId);
+      return {
+        categoryId: value.categoryId,
+        name: category?.name ?? 'Unknown',
+        color: category?.color ?? '#666666',
+        icon: category?.icon ?? 'Circle',
+        amountCents: value.amountCents,
+      };
+    }),
+    categoryDisplayOrder,
+  );
 
   const latestAllocation = latestCategoryValues.map((value) => ({
     ...value,
@@ -244,7 +331,8 @@ export function getDashboard(
     firstTotalCents,
     changeSinceFirstCents,
     changeSinceFirstPercent,
-    latestDate: latest.date,
+    latestDate: latestInRange.date,
+    categoryDisplayOrder,
     timeSeries,
     categoryTimeSeries,
     latestAllocation,

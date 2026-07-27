@@ -18,6 +18,7 @@ import {
   createTestContext,
   type TestContext,
 } from '../test/helpers.js';
+import { createCapturingLogger } from '../test/logging.js';
 import { createRateLimiters } from './rateLimits.js';
 
 function expectRateLimited(response: request.Response): void {
@@ -39,9 +40,11 @@ function expectRateLimited(response: request.Response): void {
 
 describe('express-rate-limit middleware', () => {
   let ctx: TestContext | undefined;
+  let logger: ReturnType<typeof createCapturingLogger>;
 
   beforeEach(() => {
     ctx = undefined;
+    logger = createCapturingLogger();
     __resetSessionsForTests();
     __resetPinRateLimitForTests();
   });
@@ -53,8 +56,14 @@ describe('express-rate-limit middleware', () => {
     vi.useRealTimers();
   });
 
+  function limiters(
+    overrides: Parameters<typeof createRateLimiters>[0] = {},
+  ) {
+    return createRateLimiters(overrides, logger);
+  }
+
   it('allows portfolio requests below the general limit and blocks above it', async () => {
-    const rateLimiters = createRateLimiters({
+    const rateLimiters = limiters({
       portfolioApi: { windowMs: 60_000, limit: 3 },
     });
     ctx = createTestContext({ rateLimiters });
@@ -66,11 +75,14 @@ describe('express-rate-limit middleware', () => {
 
     const limited = await request(ctx.app).get('/api/settings');
     expectRateLimited(limited);
+    expect(logger.warns).toEqual([
+      'Rate limit exceeded for portfolio-api (GET /)',
+    ]);
   });
 
   it('resets the portfolio limiter after its window', async () => {
     vi.useFakeTimers();
-    const rateLimiters = createRateLimiters({
+    const rateLimiters = limiters({
       portfolioApi: { windowMs: 1_000, limit: 2 },
     });
     ctx = createTestContext({ rateLimiters });
@@ -78,6 +90,7 @@ describe('express-rate-limit middleware', () => {
     expect((await request(ctx.app).get('/api/settings')).status).toBe(200);
     expect((await request(ctx.app).get('/api/settings')).status).toBe(200);
     expectRateLimited(await request(ctx.app).get('/api/settings'));
+    expect(logger.warns.at(-1)).toMatch(/Rate limit exceeded for portfolio-api/);
 
     await vi.advanceTimersByTimeAsync(1_100);
 
@@ -85,7 +98,7 @@ describe('express-rate-limit middleware', () => {
   });
 
   it('does not share portfolio allowance across different client IPs', async () => {
-    const rateLimiters = createRateLimiters({
+    const rateLimiters = limiters({
       portfolioApi: { windowMs: 60_000, limit: 1 },
     });
     ctx = createTestContext({ rateLimiters });
@@ -103,7 +116,7 @@ describe('express-rate-limit middleware', () => {
   });
 
   it('trusts forwarded client IP only when TRUST_PROXY hops are configured', async () => {
-    const rateLimiters = createRateLimiters({
+    const rateLimiters = limiters({
       portfolioApi: { windowMs: 60_000, limit: 1 },
     });
     ctx = createTestContext({
@@ -128,7 +141,7 @@ describe('express-rate-limit middleware', () => {
   });
 
   it('keeps auth status on a generous separate limiter', async () => {
-    const rateLimiters = createRateLimiters({
+    const rateLimiters = limiters({
       authStatus: { windowMs: 60_000, limit: 2 },
       portfolioApi: { windowMs: 60_000, limit: 1 },
     });
@@ -137,13 +150,14 @@ describe('express-rate-limit middleware', () => {
     expect((await request(ctx.app).get('/api/auth/status')).status).toBe(200);
     expect((await request(ctx.app).get('/api/auth/status')).status).toBe(200);
     expectRateLimited(await request(ctx.app).get('/api/auth/status'));
+    expect(logger.warns.at(-1)).toMatch(/Rate limit exceeded for auth-status/);
 
     // Exhausting auth status must not consume the portfolio limiter.
     expect((await request(ctx.app).get('/api/settings')).status).toBe(200);
   });
 
   it('still enforces incorrect-PIN lockout alongside the volume limiter', async () => {
-    ctx = createTestContext();
+    ctx = createTestContext({ rateLimiters: limiters() });
 
     await request(ctx.app).post('/api/auth/setup').send({ pin: '1234' });
     __resetSessionsForTests();
@@ -164,7 +178,7 @@ describe('express-rate-limit middleware', () => {
   });
 
   it('applies a request-volume limit to PIN unlock including after successful unlocks', async () => {
-    const rateLimiters = createRateLimiters({
+    const rateLimiters = limiters({
       authPin: { windowMs: 60_000, limit: 3 },
     });
     ctx = createTestContext({ rateLimiters });
@@ -193,6 +207,7 @@ describe('express-rate-limit middleware', () => {
     expectRateLimited(
       await request(ctx.app).post('/api/auth/unlock').send({ pin: '1234' }),
     );
+    expect(logger.warns.at(-1)).toMatch(/Rate limit exceeded for auth-pin/);
   });
 
   it('limits malformed authentication requests and never logs PIN values', async () => {
@@ -205,7 +220,7 @@ describe('express-rate-limit middleware', () => {
     ];
 
     try {
-      const rateLimiters = createRateLimiters({
+      const rateLimiters = limiters({
         authPin: { windowMs: 60_000, limit: 3 },
       });
       ctx = createTestContext({ rateLimiters });
@@ -232,6 +247,8 @@ describe('express-rate-limit middleware', () => {
           expect(JSON.stringify(args)).not.toContain('not-a-pin');
         }
       }
+      expect(JSON.stringify(logger.warns)).not.toContain('2468');
+      expect(JSON.stringify(logger.warns)).not.toContain('not-a-pin');
     } finally {
       for (const spy of spies) {
         spy.mockRestore();
@@ -240,7 +257,7 @@ describe('express-rate-limit middleware', () => {
   });
 
   it('keeps health public while locked, with its own limiter', async () => {
-    const rateLimiters = createRateLimiters({
+    const rateLimiters = limiters({
       health: { windowMs: 60_000, limit: 2 },
       portfolioApi: { windowMs: 60_000, limit: 1 },
     });
@@ -252,6 +269,7 @@ describe('express-rate-limit middleware', () => {
     expect((await request(ctx.app).get('/api/health')).status).toBe(200);
     expect((await request(ctx.app).get('/api/health')).status).toBe(200);
     expectRateLimited(await request(ctx.app).get('/api/health'));
+    expect(logger.warns.at(-1)).toMatch(/Rate limit exceeded for health/);
 
     // Health exhaustion must not consume the portfolio limiter.
     const lockedPortfolio = await request(ctx.app).get('/api/settings');
@@ -260,7 +278,7 @@ describe('express-rate-limit middleware', () => {
   });
 
   it('accepts normal health polling frequency', async () => {
-    ctx = createTestContext();
+    ctx = createTestContext({ rateLimiters: limiters() });
     for (let i = 0; i < 5; i += 1) {
       expect((await request(ctx.app).get('/api/health')).status).toBe(200);
     }
@@ -284,11 +302,16 @@ describe('express-rate-limit middleware', () => {
     );
 
     const db = openDatabase(dataDir);
-    const rateLimiters = createRateLimiters({
+    const rateLimiters = limiters({
       portfolioApi: { windowMs: 60_000, limit: 1 },
       spaFallback: { windowMs: 60_000, limit: 50 },
     });
-    const app = createApp(db, { dataDir, clientDistDir, rateLimiters });
+    const app = createApp(db, {
+      dataDir,
+      clientDistDir,
+      rateLimiters,
+      logger,
+    });
 
     try {
       expect((await request(app).get('/api/settings')).status).toBe(200);
@@ -320,15 +343,23 @@ describe('express-rate-limit middleware', () => {
       'utf8',
     );
     const db = openDatabase(dataDir);
-    const rateLimiters = createRateLimiters({
+    const rateLimiters = limiters({
       spaFallback: { windowMs: 60_000, limit: 2 },
     });
-    const app = createApp(db, { dataDir, clientDistDir, rateLimiters });
+    const app = createApp(db, {
+      dataDir,
+      clientDistDir,
+      rateLimiters,
+      logger,
+    });
 
     try {
       expect((await request(app).get('/one')).status).toBe(200);
       expect((await request(app).get('/two')).status).toBe(200);
       expectRateLimited(await request(app).get('/three'));
+      expect(logger.warns.at(-1)).toMatch(
+        /Rate limit exceeded for spa-fallback/,
+      );
     } finally {
       db.close();
       rmSync(dataDir, { recursive: true, force: true });

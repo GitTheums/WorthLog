@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { usePrivacyModeContext } from '../privacy/PrivacyModeContext';
+import { usePrivacyModeContext } from '../privacy/usePrivacyModeContext';
 import './PrivacyValue.css';
 
 interface PrivacyValueProps {

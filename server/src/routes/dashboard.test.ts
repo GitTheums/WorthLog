@@ -38,6 +38,8 @@ describe('dashboard API', () => {
       latestCategoryValues: [],
       historyRows: [],
     });
+    // No snapshots: order falls back to manual sortOrder (fixture order).
+    expect(response.body.data.categoryDisplayOrder).toHaveLength(4);
   });
 
   it('GET /api/dashboard returns totals, changes, series, allocation and history', async () => {
@@ -79,6 +81,7 @@ describe('dashboard API', () => {
     expect(response.body.data.categoryTimeSeries).toHaveLength(4);
     expect(response.body.data.latestAllocation).toHaveLength(4);
     expect(response.body.data.latestCategoryValues).toHaveLength(4);
+    expect(response.body.data.categoryDisplayOrder).toHaveLength(4);
     expect(response.body.data.historyRows[0]).toMatchObject({
       date: '2026-03-01',
       totalValueCents: 12_000,

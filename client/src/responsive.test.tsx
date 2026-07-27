@@ -48,7 +48,7 @@ describe('responsive layout', () => {
     );
 
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
-    expect(screen.getByRole('list')).toBeInTheDocument();
+    expect(screen.getAllByRole('list').length).toBeGreaterThan(0);
     expect(
       screen.getAllByRole('button', { name: /Edit snapshot for/i }).length,
     ).toBeGreaterThan(0);

@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -15,27 +13,7 @@ import {
   unlockPortfolio,
 } from '../api/client';
 import type { AuthStatus } from '../api/types';
-
-interface AuthContextValue {
-  status: AuthStatus | null;
-  loading: boolean;
-  error: string | null;
-  pinEnabled: boolean;
-  unlocked: boolean;
-  refreshStatus: () => Promise<void>;
-  unlock: (pin: string) => Promise<void>;
-  lock: () => Promise<void>;
-  markLocked: () => void;
-  applyStatus: (status: AuthStatus) => void;
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null);
-
-const LOCKED_STATUS: AuthStatus = {
-  pinEnabled: true,
-  unlocked: false,
-  sessionExpiresAt: null,
-};
+import { AuthContext, LOCKED_STATUS } from './auth-context';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus | null>(null);
@@ -102,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus(next);
   }, []);
 
-  const value = useMemo<AuthContextValue>(
+  const value = useMemo(
     () => ({
       status,
       loading,
@@ -128,12 +106,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth(): AuthContextValue {
-  const value = useContext(AuthContext);
-  if (!value) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return value;
 }

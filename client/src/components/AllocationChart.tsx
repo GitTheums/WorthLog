@@ -1,7 +1,7 @@
 import { Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { DashboardData } from '../api/types';
 import { formatMoney, formatSharePercent } from '../lib/format';
-import { usePrivacyModeContext } from '../privacy/PrivacyModeContext';
+import { usePrivacyModeContext } from '../privacy/usePrivacyModeContext';
 import { PrivacyValue } from './PrivacyValue';
 import './AllocationChart.css';
 

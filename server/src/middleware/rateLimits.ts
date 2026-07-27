@@ -6,6 +6,7 @@ import {
   type RateLimitRequestHandler,
 } from 'express-rate-limit';
 import { sendError } from '../http/response.js';
+import { consoleLogger, type AppLogger } from '../logging.js';
 
 export interface RateLimiterWindow {
   windowMs: number;
@@ -75,6 +76,7 @@ function safeRetryAfterSeconds(req: Request, windowMs: number): number {
 function createSharedOptions(
   window: RateLimiterWindow,
   identifier: string,
+  logger: AppLogger,
 ): Partial<Options> {
   return {
     windowMs: window.windowMs,
@@ -94,7 +96,7 @@ function createSharedOptions(
       const retryAfterSeconds = safeRetryAfterSeconds(req, options.windowMs);
       res.setHeader('Retry-After', String(retryAfterSeconds));
       // Do not log request bodies, PINs, or client secrets.
-      console.warn(
+      logger.warn(
         `Rate limit exceeded for ${identifier} (${req.method} ${req.path})`,
       );
       sendError(
@@ -110,6 +112,7 @@ function createSharedOptions(
 
 export function createRateLimiters(
   overrides: Partial<RateLimiterConfig> = {},
+  logger: AppLogger = consoleLogger,
 ): AppRateLimiters {
   const config: RateLimiterConfig = {
     portfolioApi: {
@@ -136,19 +139,19 @@ export function createRateLimiters(
 
   return {
     portfolioApiRateLimiter: rateLimit(
-      createSharedOptions(config.portfolioApi, 'portfolio-api'),
+      createSharedOptions(config.portfolioApi, 'portfolio-api', logger),
     ),
     authStatusRateLimiter: rateLimit(
-      createSharedOptions(config.authStatus, 'auth-status'),
+      createSharedOptions(config.authStatus, 'auth-status', logger),
     ),
     authPinRateLimiter: rateLimit(
-      createSharedOptions(config.authPin, 'auth-pin'),
+      createSharedOptions(config.authPin, 'auth-pin', logger),
     ),
     healthRateLimiter: rateLimit(
-      createSharedOptions(config.health, 'health'),
+      createSharedOptions(config.health, 'health', logger),
     ),
     spaFallbackRateLimiter: rateLimit(
-      createSharedOptions(config.spaFallback, 'spa-fallback'),
+      createSharedOptions(config.spaFallback, 'spa-fallback', logger),
     ),
   };
 }

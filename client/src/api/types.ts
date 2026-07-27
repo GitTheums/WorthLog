@@ -135,6 +135,11 @@ export interface DashboardData {
   changeSinceFirstCents: number | null;
   changeSinceFirstPercent: number | null;
   latestDate: string | null;
+  /**
+   * Canonical dashboard category order from the newest complete-portfolio
+   * snapshot (value desc → sortOrder → name). Analytical UI must use this.
+   */
+  categoryDisplayOrder: string[];
   timeSeries: Array<{ date: string; totalValueCents: number }>;
   categoryTimeSeries: Array<{
     categoryId: string;

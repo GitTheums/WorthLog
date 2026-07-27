@@ -32,14 +32,6 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageStub,
 });
 
-class ResizeObserverStub {
-  observe(): void {}
-  unobserve(): void {}
-  disconnect(): void {}
-}
-
-vi.stubGlobal('ResizeObserver', ResizeObserverStub);
-
 if (typeof HTMLDialogElement !== 'undefined') {
   HTMLDialogElement.prototype.showModal = function showModal() {
     this.setAttribute('open', '');

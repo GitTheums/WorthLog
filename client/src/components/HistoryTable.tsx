@@ -46,13 +46,21 @@ export function HistoryTable({
     }
   }
 
-  // Prefer series order (sort order from API), then any latest-only categories.
-  const categoryIds = [
-    ...data.categoryTimeSeries.map((series) => series.categoryId),
-    ...data.latestCategoryValues
-      .map((category) => category.categoryId)
-      .filter((id) => !data.categoryTimeSeries.some((series) => series.categoryId === id)),
-  ];
+  // Canonical order from the newest complete-portfolio snapshot.
+  const categoryIds =
+    data.categoryDisplayOrder.length > 0
+      ? [...data.categoryDisplayOrder]
+      : [
+          ...data.categoryTimeSeries.map((series) => series.categoryId),
+          ...data.latestCategoryValues
+            .map((category) => category.categoryId)
+            .filter(
+              (id) =>
+                !data.categoryTimeSeries.some(
+                  (series) => series.categoryId === id,
+                ),
+            ),
+        ];
 
   if (data.historyRows.length === 0) {
     return (
@@ -126,6 +134,46 @@ export function HistoryTable({
 
                 {row.note ? (
                   <p className="history-card__note">{row.note}</p>
+                ) : null}
+
+                {categoryIds.length > 0 ? (
+                  <ul className="history-card__categories">
+                    {categoryIds.map((categoryId) => {
+                      const amount =
+                        row.values.find(
+                          (value) => value.categoryId === categoryId,
+                        )?.amountCents ?? 0;
+                      return (
+                        <li
+                          key={`${row.date}-${categoryId}`}
+                          className="history-card__category"
+                        >
+                          <span className="history-card__category-name">
+                            <span
+                              className="history-table__swatch"
+                              style={{
+                                background:
+                                  categoryMeta.get(categoryId)?.color,
+                              }}
+                              aria-hidden="true"
+                            />
+                            {categoryMeta.get(categoryId)?.name ?? categoryId}
+                          </span>
+                          <span
+                            className={
+                              amount === 0
+                                ? 'history-card__category-value history-table__zero'
+                                : 'history-card__category-value'
+                            }
+                          >
+                            <PrivacyValue>
+                              {formatMoney(amount, currency)}
+                            </PrivacyValue>
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 ) : null}
 
                 <div className="history-card__actions">

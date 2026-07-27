@@ -5,6 +5,7 @@ import type Database from 'better-sqlite3';
 import type { Express } from 'express';
 import { createApp, type AppOptions } from '../app.js';
 import { openDatabase } from '../db/index.js';
+import type { AppLogger } from '../logging.js';
 import { createRateLimiters } from '../middleware/rateLimits.js';
 import {
   createCategory,
@@ -57,6 +58,7 @@ export function createTestContext(options?: {
   multiCategory?: boolean;
   trustProxy?: AppOptions['trustProxy'];
   rateLimiters?: AppOptions['rateLimiters'];
+  logger?: AppLogger;
 }): TestContext {
   const dataDir = mkdtempSync(join(tmpdir(), 'worthlog-api-'));
   const db = openDatabase(dataDir);
@@ -68,6 +70,7 @@ export function createTestContext(options?: {
   const app = createApp(db, {
     dataDir,
     rateLimiters: options?.rateLimiters ?? createRateLimiters(),
+    ...(options?.logger !== undefined ? { logger: options.logger } : {}),
     ...(options?.trustProxy !== undefined
       ? { trustProxy: options.trustProxy }
       : {}),
