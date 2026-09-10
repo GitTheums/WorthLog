@@ -319,8 +319,7 @@ export function SecuritySettings({
 
           {changeOpen ? (
             <form
-              className="settings-form"
-              style={{ marginTop: '1.25rem' }}
+              className="settings-form settings-form--nested"
               onSubmit={(event) => {
                 void handleChangePin(event);
               }}
@@ -415,8 +414,7 @@ export function SecuritySettings({
 
           {removeOpen ? (
             <form
-              className="settings-form"
-              style={{ marginTop: '1.25rem' }}
+              className="settings-form settings-form--nested"
               onSubmit={(event) => {
                 void handleRemovePin(event);
               }}

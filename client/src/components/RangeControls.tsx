@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from 'react';
+import { useRef, type CSSProperties, type KeyboardEvent } from 'react';
 import type { DashboardRange } from '../api/types';
 import './RangeControls.css';
 
@@ -16,6 +16,10 @@ interface RangeControlsProps {
 
 export function RangeControls({ value, onChange }: RangeControlsProps) {
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const selectedIndex = Math.max(
+    0,
+    RANGES.findIndex((range) => range.value === value),
+  );
 
   const focusIndex = (index: number) => {
     const clamped = (index + RANGES.length) % RANGES.length;
@@ -52,7 +56,9 @@ export function RangeControls({ value, onChange }: RangeControlsProps) {
       className="range-controls"
       role="group"
       aria-label="Dashboard date range"
+      style={{ '--range-index': selectedIndex } as CSSProperties}
     >
+      <span className="range-controls__thumb" aria-hidden="true" />
       {RANGES.map((range, index) => {
         const selected = range.value === value;
         return (

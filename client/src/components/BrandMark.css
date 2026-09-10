@@ -1,31 +1,32 @@
 .brand-mark {
   display: flex;
   align-items: end;
+  justify-content: center;
   gap: 3px;
-  width: 2rem;
-  height: 2rem;
-  padding: 0.35rem;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--card);
-  box-shadow: var(--shadow);
+  width: 2.05rem;
+  height: 2.05rem;
+  padding: 0.38rem 0.34rem 0.34rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--card));
+  box-shadow: var(--shadow-sm);
   flex-shrink: 0;
 }
 
 .brand-mark__bar {
-  width: 4px;
-  height: 8px;
-  border-radius: 999px;
+  width: 3.5px;
+  height: 7px;
+  border-radius: var(--radius-full);
   background: var(--accent);
-  opacity: 0.55;
+  opacity: 0.42;
 }
 
 .brand-mark__bar--mid {
-  height: 12px;
-  opacity: 0.8;
+  height: 11px;
+  opacity: 0.72;
 }
 
 .brand-mark__bar--tall {
-  height: 16px;
+  height: 15px;
   opacity: 1;
 }

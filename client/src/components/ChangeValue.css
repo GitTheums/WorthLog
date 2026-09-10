@@ -1,9 +1,11 @@
 .change-value {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.45rem;
-  font-weight: 600;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-weight: 590;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 .change-value--positive {
@@ -19,7 +21,19 @@
 }
 
 .change-value__percent {
-  font-size: 0.9em;
+  font-size: 0.78em;
   font-weight: 550;
-  opacity: 0.9;
+  letter-spacing: -0.01em;
+  padding: 0.12em 0.45em;
+  border-radius: var(--radius-full);
+  background: var(--neutral-soft);
+  color: inherit;
+}
+
+.change-value--positive .change-value__percent {
+  background: var(--positive-soft);
+}
+
+.change-value--negative .change-value__percent {
+  background: var(--negative-soft);
 }

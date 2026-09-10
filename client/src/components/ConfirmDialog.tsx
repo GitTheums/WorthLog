@@ -51,10 +51,10 @@ export function ConfirmDialog({
   }
 
   return (
-    <div className="confirm-dialog" role="presentation">
+    <div className="confirm-dialog overlay" role="presentation">
       <button
         type="button"
-        className="confirm-dialog__backdrop"
+        className="confirm-dialog__backdrop overlay__backdrop"
         aria-label="Dismiss dialog"
         disabled={busy}
         onClick={() => {
@@ -65,13 +65,14 @@ export function ConfirmDialog({
       />
       <div
         ref={panelRef}
-        className="confirm-dialog__panel"
+        className="confirm-dialog__panel overlay__panel"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         tabIndex={-1}
       >
+        <div className="sheet-handle" aria-hidden="true" />
         <h2 id={titleId} className="confirm-dialog__title">
           {title}
         </h2>

@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Info } from 'lucide-react';
+import { Info, X } from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -334,10 +334,10 @@ export function SnapshotModal({
 
   return (
     <>
-      <div className="snapshot-modal" role="presentation">
+      <div className="snapshot-modal overlay" role="presentation">
         <button
           type="button"
-          className="snapshot-modal__backdrop"
+          className="snapshot-modal__backdrop overlay__backdrop"
           aria-label="Dismiss snapshot dialog"
           disabled={saving}
           onClick={() => {
@@ -349,13 +349,14 @@ export function SnapshotModal({
 
         <div
           ref={panelRef}
-          className="snapshot-modal__panel"
+          className="snapshot-modal__panel overlay__panel"
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
           aria-describedby={descriptionId}
           tabIndex={-1}
         >
+          <div className="sheet-handle" aria-hidden="true" />
           <header className="snapshot-modal__header">
             <div>
               <h2 id={titleId} className="snapshot-modal__title">
@@ -374,7 +375,7 @@ export function SnapshotModal({
               disabled={saving}
               aria-label="Close snapshot dialog"
             >
-              Close
+              <X size={18} strokeWidth={1.8} aria-hidden="true" />
             </button>
           </header>
 

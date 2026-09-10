@@ -3,9 +3,14 @@ import {
   ArchiveRestore,
   ChevronDown,
   ChevronUp,
+  HardDrive,
   Pencil,
   Plus,
+  Shield,
+  SlidersHorizontal,
+  Tags,
   Trash2,
+  X,
 } from 'lucide-react';
 import {
   useCallback,
@@ -489,22 +494,23 @@ export function SettingsDialog({
 
   return (
     <>
-      <div className="settings-dialog" role="presentation">
+      <div className="settings-dialog overlay" role="presentation">
         <button
           type="button"
-          className="settings-dialog__backdrop"
+          className="settings-dialog__backdrop overlay__backdrop"
           aria-label="Dismiss settings"
           onClick={onClose}
         />
         <div
           ref={panelRef}
-          className="settings-dialog__panel"
+          className="settings-dialog__panel overlay__panel"
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
           aria-describedby={descriptionId}
           tabIndex={-1}
         >
+          <div className="sheet-handle" aria-hidden="true" />
           <header className="settings-dialog__header">
             <div>
               <h2 id={titleId} className="settings-dialog__title">
@@ -518,20 +524,22 @@ export function SettingsDialog({
               type="button"
               className="settings-dialog__close"
               onClick={onClose}
+              aria-label="Close settings"
             >
-              Close
+              <X size={18} strokeWidth={1.8} aria-hidden="true" />
             </button>
           </header>
 
+          <div className="settings-dialog__layout">
           <div className="settings-dialog__tabs" role="tablist" aria-label="Settings sections">
             {(
               [
-                ['categories', 'Categories'],
-                ['general', 'General'],
-                ['security', 'Security'],
-                ['backup', 'Backup and restore'],
+                ['categories', 'Categories', Tags],
+                ['general', 'General', SlidersHorizontal],
+                ['security', 'Security', Shield],
+                ['backup', 'Backup and restore', HardDrive],
               ] as const
-            ).map(([value, label]) => (
+            ).map(([value, label, Icon]) => (
               <button
                 key={value}
                 type="button"
@@ -546,6 +554,7 @@ export function SettingsDialog({
                   setTab(value);
                 }}
               >
+                <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
                 {label}
               </button>
             ))}
@@ -1012,6 +1021,7 @@ export function SettingsDialog({
                 ) : null}
               </section>
             ) : null}
+          </div>
           </div>
         </div>
       </div>

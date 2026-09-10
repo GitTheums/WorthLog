@@ -1,80 +1,77 @@
 .empty-state {
-  position: relative;
   display: grid;
   justify-items: start;
   gap: var(--space-4);
-  overflow: hidden;
-  padding: clamp(2rem, 4vw, 3.5rem);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--card) 88%, var(--accent-soft)), var(--card));
-  box-shadow: var(--shadow);
-}
-
-.empty-state__glow {
-  position: absolute;
-  inset: auto -10% 40% auto;
-  width: 18rem;
-  height: 18rem;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--accent-soft), transparent 70%);
-  pointer-events: none;
+  padding: clamp(1.75rem, 3.5vw, 2.75rem);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
 }
 
 .empty-state__icon {
-  position: relative;
   display: grid;
   place-items: center;
-  width: 3.25rem;
-  height: 3.25rem;
+  width: 3rem;
+  height: 3rem;
   border-radius: 14px;
   color: var(--accent);
   background: var(--accent-soft);
 }
 
 .empty-state__title {
-  position: relative;
   margin: 0;
-  font-size: 1.45rem;
+  font-size: 1.35rem;
   font-weight: 650;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.035em;
 }
 
 .empty-state__message {
-  position: relative;
   margin: 0;
-  max-width: 42rem;
+  max-width: 38rem;
   color: var(--text-secondary);
-  font-size: 0.98rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 .empty-state__list {
-  position: relative;
   margin: 0;
-  padding-left: 1.2rem;
+  padding-left: 1.15rem;
   color: var(--text-secondary);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   display: grid;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .empty-state__button {
-  position: relative;
-  min-height: 2.75rem;
-  padding: 0.7rem 1.15rem;
+  min-height: var(--control-height);
+  padding: 0.65rem 1.1rem;
   border: none;
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-full);
   background: var(--accent);
-  color: #fff;
-  font-weight: 600;
-  transition: opacity var(--transition);
+  color: var(--accent-contrast);
+  font-weight: 590;
+  letter-spacing: -0.015em;
+  box-shadow: var(--shadow-sm);
+  transition:
+    background var(--transition),
+    transform var(--transition);
 }
 
 .empty-state__button:hover {
-  opacity: 0.92;
+  background: var(--accent-hover);
+}
+
+.empty-state__button:active {
+  transform: scale(0.97);
 }
 
 .empty-state__button:focus-visible {
   box-shadow: var(--focus);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .empty-state__button:active {
+    transform: none;
+  }
 }

@@ -1,4 +1,4 @@
-import { LineChart } from 'lucide-react';
+import { FolderPlus, LineChart } from 'lucide-react';
 import './EmptyState.css';
 
 interface EmptyStateProps {
@@ -15,9 +15,8 @@ export function EmptyState({
   if (variant === 'no-categories') {
     return (
       <section className="empty-state" aria-labelledby="empty-state-title">
-        <div className="empty-state__glow" aria-hidden="true" />
         <div className="empty-state__icon" aria-hidden="true">
-          <LineChart size={28} strokeWidth={1.6} />
+          <FolderPlus size={26} strokeWidth={1.6} />
         </div>
         <h2 id="empty-state-title" className="empty-state__title">
           No categories yet
@@ -41,9 +40,8 @@ export function EmptyState({
 
   return (
     <section className="empty-state" aria-labelledby="empty-state-title">
-      <div className="empty-state__glow" aria-hidden="true" />
       <div className="empty-state__icon" aria-hidden="true">
-        <LineChart size={28} strokeWidth={1.6} />
+        <LineChart size={26} strokeWidth={1.6} />
       </div>
       <h2 id="empty-state-title" className="empty-state__title">
         No snapshots yet

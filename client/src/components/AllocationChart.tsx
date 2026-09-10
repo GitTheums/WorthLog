@@ -1,3 +1,4 @@
+import { PieChart as PieChartIcon } from 'lucide-react';
 import { Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { DashboardData } from '../api/types';
 import { formatMoney, formatSharePercent } from '../lib/format';
@@ -71,9 +72,12 @@ export function AllocationChart({ data, currency }: AllocationChartProps) {
       </div>
 
       {slices.length === 0 ? (
-        <p className="allocation-chart__empty" role="status">
-          No positive allocation in the latest snapshot.
-        </p>
+        <div className="allocation-chart__empty" role="status">
+          <span className="allocation-chart__empty-icon" aria-hidden="true">
+            <PieChartIcon size={22} strokeWidth={1.6} />
+          </span>
+          <p>No positive allocation in the latest snapshot.</p>
+        </div>
       ) : (
         <>
           <div className="allocation-chart__canvas">
@@ -83,11 +87,11 @@ export function AllocationChart({ data, currency }: AllocationChartProps) {
                   data={slices}
                   dataKey="amountCents"
                   nameKey="name"
-                  innerRadius="58%"
-                  outerRadius="86%"
-                  paddingAngle={2}
+                  innerRadius="62%"
+                  outerRadius="84%"
+                  paddingAngle={1.5}
                   stroke="var(--card)"
-                  strokeWidth={2}
+                  strokeWidth={3}
                 />
                 <Tooltip
                   allowEscapeViewBox={{ x: true, y: true }}

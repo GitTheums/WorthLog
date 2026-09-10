@@ -3,60 +3,81 @@
   align-content: start;
   gap: var(--space-4);
   min-height: 420px;
-  padding: var(--space-5);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
+  padding: 1.2rem 1.25rem 1.15rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
   background: var(--card);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
   min-width: 0;
 }
 
 .allocation-chart__header {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.15rem;
 }
 
 .allocation-chart__title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 650;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .allocation-chart__subtitle,
 .allocation-chart__empty {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 0.88rem;
+  font-size: 0.8rem;
+  letter-spacing: -0.01em;
 }
 
 .allocation-chart__empty {
   display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 0.55rem;
   align-content: center;
   min-height: 220px;
   padding: 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--card-secondary);
+}
+
+.allocation-chart__empty p {
+  margin: 0;
+  max-width: 16rem;
+}
+
+.allocation-chart__empty-icon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 12px;
-  background: var(--bg);
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .allocation-chart__canvas {
   position: relative;
   width: 100%;
-  height: 240px;
+  height: 236px;
   min-width: 0;
 }
 
 .allocation-chart__center-label {
   fill: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 550;
+  letter-spacing: 0.02em;
 }
 
 .allocation-chart__center-value {
   fill: var(--text);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
 }
 
 .allocation-chart__legend {
@@ -64,23 +85,31 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.65rem;
+  gap: 0.2rem;
 }
 
 .allocation-chart__legend-item {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 0.65rem;
-  font-size: 0.9rem;
+  gap: 0.6rem;
+  min-height: 2.15rem;
+  padding: 0.28rem 0.4rem;
+  border-radius: 10px;
+  font-size: 0.86rem;
   min-width: 0;
+  transition: background var(--transition);
+}
+
+.allocation-chart__legend-item:hover {
+  background: var(--fill);
 }
 
 .allocation-chart__swatch {
-  width: 0.65rem;
-  height: 0.65rem;
-  border-radius: 999px;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 80%, transparent);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 70%, transparent);
 }
 
 .allocation-chart__legend-name {
@@ -88,25 +117,27 @@
   min-width: 0;
   overflow-wrap: anywhere;
   word-break: break-word;
+  letter-spacing: -0.01em;
 }
 
 .allocation-chart__legend-meta {
   display: grid;
   justify-items: end;
-  gap: 0.1rem;
+  gap: 0.05rem;
   font-variant-numeric: tabular-nums;
 }
 
 .allocation-chart__legend-money {
   color: var(--text);
-  font-weight: 600;
-  font-size: 0.86rem;
+  font-weight: 590;
+  font-size: 0.82rem;
+  letter-spacing: -0.02em;
 }
 
 .allocation-chart__legend-value {
   color: var(--text-secondary);
-  font-weight: 600;
-  font-size: 0.78rem;
+  font-weight: 550;
+  font-size: 0.72rem;
 }
 
 .allocation-tooltip__percent {
@@ -123,7 +154,7 @@
 
 @media (max-width: 767px) {
   .allocation-chart {
-    padding: var(--space-4);
+    padding: 1rem;
   }
 
   .allocation-chart__canvas {
@@ -135,6 +166,8 @@
     grid-template-areas:
       'swatch name'
       'meta meta';
+    min-height: 0;
+    padding: 0.5rem 0.35rem;
   }
 
   .allocation-chart__swatch {
@@ -150,6 +183,6 @@
     justify-items: start;
     grid-auto-flow: column;
     gap: 0.75rem;
-    padding-left: 1.3rem;
+    padding-left: 1.1rem;
   }
 }

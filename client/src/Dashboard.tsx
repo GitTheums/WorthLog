@@ -261,30 +261,30 @@ export function Dashboard() {
 
   return (
     <div className="dashboard-shell">
-      <div className="dashboard">
-        <Header
-          theme={theme}
-          privacyHidden={privacyHidden}
-          showLockButton={pinEnabled}
-          onToggleTheme={toggleTheme}
-          onTogglePrivacy={togglePrivacy}
-          onLock={() => {
-            void handleLock();
-          }}
-          onAddSnapshot={() => {
-            const active = document.activeElement;
-            openAddSnapshot(
-              active instanceof HTMLElement ? active : undefined,
-            );
-          }}
-          onOpenSettings={() => {
-            const active = document.activeElement;
-            openCategorySettings(
-              active instanceof HTMLElement ? active : null,
-            );
-          }}
-        />
+      <Header
+        theme={theme}
+        privacyHidden={privacyHidden}
+        showLockButton={pinEnabled}
+        onToggleTheme={toggleTheme}
+        onTogglePrivacy={togglePrivacy}
+        onLock={() => {
+          void handleLock();
+        }}
+        onAddSnapshot={() => {
+          const active = document.activeElement;
+          openAddSnapshot(
+            active instanceof HTMLElement ? active : undefined,
+          );
+        }}
+        onOpenSettings={() => {
+          const active = document.activeElement;
+          openCategorySettings(
+            active instanceof HTMLElement ? active : null,
+          );
+        }}
+      />
 
+      <div className="dashboard">
         <main className="dashboard__main">{mainContent}</main>
       </div>
 

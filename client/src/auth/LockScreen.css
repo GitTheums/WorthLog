@@ -5,89 +5,88 @@
   padding: 1.25rem;
   background:
     radial-gradient(
-      1200px 600px at 20% -10%,
-      color-mix(in srgb, var(--accent) 14%, transparent),
-      transparent 60%
-    ),
-    radial-gradient(
-      900px 500px at 100% 0%,
-      color-mix(in srgb, var(--accent) 8%, transparent),
-      transparent 55%
+      720px 380px at 50% -8%,
+      color-mix(in srgb, var(--accent) 10%, transparent),
+      transparent 62%
     ),
     var(--bg);
 }
 
 .lock-screen__panel {
   width: min(100%, 22rem);
-  padding: 1.75rem 1.5rem 1.6rem;
+  padding: 1.85rem 1.55rem 1.55rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  background: var(--card-raised);
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-2xl);
+  background: var(--glass-fallback);
+  box-shadow: var(--shadow-lg);
+}
+
+@supports ((-webkit-backdrop-filter: blur(28px)) or (backdrop-filter: blur(28px))) {
+  .lock-screen__panel {
+    background: var(--glass);
+    -webkit-backdrop-filter: saturate(180%) blur(28px);
+    backdrop-filter: saturate(180%) blur(28px);
+  }
 }
 
 .lock-screen__brand {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.35rem;
+  gap: 0.7rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
 }
 
 .lock-screen__mark {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
 }
 
 .lock-screen__name {
   margin: 0;
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-size: 1.28rem;
+  font-weight: 650;
+  letter-spacing: -0.04em;
 }
 
 .lock-screen__heading {
   margin: 0;
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 1.18rem;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  text-align: center;
 }
 
 .lock-screen__text {
-  margin: 0.45rem 0 0;
+  margin: 0.4rem 0 0;
   color: var(--text-secondary);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   line-height: 1.45;
+  text-align: center;
 }
 
 .lock-screen__form {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.55rem;
   margin-top: 1.35rem;
 }
 
 .lock-screen__label {
-  font-size: 0.86rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 590;
+  letter-spacing: -0.01em;
   color: var(--text-secondary);
 }
 
 .lock-screen__input {
   width: 100%;
-  min-height: 2.85rem;
+  min-height: 3rem;
   padding: 0.7rem 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  background: var(--card);
-  color: var(--text);
-  font-size: 1.15rem;
-  letter-spacing: 0.28em;
+  text-align: center;
+  font-size: 1.2rem;
+  letter-spacing: 0.32em;
   font-variant-numeric: tabular-nums;
-}
-
-.lock-screen__input:focus {
-  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
-  outline-offset: 1px;
-  border-color: var(--accent);
 }
 
 .lock-screen__input:disabled {
@@ -96,29 +95,46 @@
 
 .lock-screen__error {
   margin: 0;
-  color: var(--danger, #c2410c);
-  font-size: 0.9rem;
+  color: var(--negative);
+  font-size: 0.88rem;
   line-height: 1.4;
+  text-align: center;
 }
 
 .lock-screen__submit {
-  min-height: 2.85rem;
-  margin-top: 0.35rem;
+  min-height: 2.95rem;
+  margin-top: 0.45rem;
   border: none;
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-full);
   background: var(--accent);
-  color: #fff;
-  font-weight: 600;
+  color: var(--accent-contrast);
+  font-weight: 590;
   font-size: 0.98rem;
+  letter-spacing: -0.015em;
+  box-shadow: var(--shadow-sm);
+  transition:
+    background var(--transition),
+    transform var(--transition),
+    opacity var(--transition);
 }
 
 .lock-screen__submit:hover:not(:disabled) {
-  opacity: 0.92;
+  background: var(--accent-hover);
+}
+
+.lock-screen__submit:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .lock-screen__submit:disabled {
-  opacity: 0.55;
+  opacity: 0.48;
   cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lock-screen__submit:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 @media (max-width: 359px) {
@@ -127,6 +143,6 @@
   }
 
   .lock-screen__panel {
-    padding: 1.35rem 1rem 1.25rem;
+    padding: 1.4rem 1rem 1.2rem;
   }
 }

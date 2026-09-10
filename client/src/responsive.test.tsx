@@ -96,6 +96,56 @@ describe('responsive layout', () => {
     expect(screen.getByRole('table')).toBeInTheDocument();
   });
 
+  it('keeps header controls available at 320px', async () => {
+    setViewportWidth(320);
+    mockApi();
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Worthlog' });
+
+    expect(
+      screen.getByRole('button', { name: 'Add snapshot' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Hide monetary values' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Switch to dark theme' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Open settings' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps settings sections available as tabs', async () => {
+    setViewportWidth(1440);
+    mockApi();
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole('heading', { name: 'History' });
+
+    await user.click(screen.getByRole('button', { name: 'Open settings' }));
+    const dialog = screen.getByRole('dialog', { name: 'Settings' });
+    const tablist = within(dialog).getByRole('tablist', {
+      name: 'Settings sections',
+    });
+
+    expect(
+      within(tablist).getByRole('tab', { name: 'Categories' }),
+    ).toHaveAttribute('aria-selected', 'true');
+    expect(
+      within(tablist).getByRole('tab', { name: 'General' }),
+    ).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole('tab', { name: 'Security' }),
+    ).toBeInTheDocument();
+    expect(
+      within(tablist).getByRole('tab', { name: 'Backup and restore' }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('button', { name: 'Close settings' }),
+    ).toBeInTheDocument();
+  });
+
   it('keeps modal accessible on mobile', async () => {
     setViewportWidth(375);
     mockApi();

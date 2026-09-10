@@ -10,9 +10,9 @@
 .category-delete-dialog__warning {
   margin: 0;
   padding: 0.75rem 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--negative) 35%, var(--border));
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--negative) 12%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--negative) 28%, var(--border));
+  border-radius: 14px;
+  background: var(--negative-soft);
   color: var(--text);
   font-size: 0.9rem;
   line-height: 1.45;
@@ -24,17 +24,8 @@
 }
 
 .category-delete-dialog__confirm-field label {
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   color: var(--text-secondary);
-}
-
-.category-delete-dialog__confirm-field input {
-  min-height: 2.5rem;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  background: var(--card);
-  color: var(--text);
 }
 
 .category-delete-dialog__error {
@@ -46,10 +37,5 @@
 @media (max-width: 767px) {
   .category-delete-dialog__panel {
     width: 100%;
-  }
-
-  .category-delete-dialog__confirm-field input {
-    font-size: 16px;
-    min-height: 2.75rem;
   }
 }

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { LineChart as LineChartIcon } from 'lucide-react';
 import {
   CartesianGrid,
   Line,
@@ -9,7 +10,7 @@ import {
   YAxis,
 } from 'recharts';
 import type { DashboardData, DashboardRange } from '../api/types';
-import { useIsMobileLayout } from '../hooks/useMediaQuery';
+import { useIsMobileLayout, useMediaQuery } from '../hooks/useMediaQuery';
 import {
   formatChartTick,
   formatChartTickCompact,
@@ -108,6 +109,7 @@ export function TotalValueChart({
   const points = data.timeSeries;
   const categories = data.categoryTimeSeries;
   const isMobile = useIsMobileLayout();
+  const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const { hidden: privacyHidden } = usePrivacyModeContext();
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(
     () => new Set(),
@@ -171,6 +173,9 @@ export function TotalValueChart({
 
       {emptyRange ? (
         <div className="total-chart__message" role="status">
+          <span className="total-chart__message-icon" aria-hidden="true">
+            <LineChartIcon size={22} strokeWidth={1.6} />
+          </span>
           <p className="total-chart__message-title">No snapshots in this range</p>
           <p className="total-chart__message-body">
             Try a wider range such as 1Y or All to see your earlier history.
@@ -199,7 +204,7 @@ export function TotalValueChart({
               >
                 <CartesianGrid
                   stroke="var(--chart-grid)"
-                  strokeDasharray="3 3"
+                  strokeDasharray="0"
                   vertical={false}
                 />
                 <XAxis
@@ -245,10 +250,14 @@ export function TotalValueChart({
                   dataKey="totalValueCents"
                   name="Total"
                   stroke="var(--accent)"
-                  strokeWidth={2.5}
-                  dot={points.length <= 24 || singlePoint}
+                  strokeWidth={2.25}
+                  dot={
+                    points.length <= 12 || singlePoint
+                      ? { r: 3, strokeWidth: 0 }
+                      : false
+                  }
                   activeDot={{ r: 5, strokeWidth: 0 }}
-                  isAnimationActive={!refreshing}
+                  isAnimationActive={!refreshing && !reduceMotion}
                 />
                 {categories.map((category) =>
                   hiddenCategories.has(category.categoryId) ? null : (
@@ -258,11 +267,11 @@ export function TotalValueChart({
                       dataKey={category.categoryId}
                       name={category.name}
                       stroke={category.color}
-                      strokeWidth={1.75}
-                      strokeOpacity={0.9}
+                      strokeWidth={1.6}
+                      strokeOpacity={0.88}
                       dot={false}
                       activeDot={{ r: 4, strokeWidth: 0 }}
-                      isAnimationActive={!refreshing}
+                      isAnimationActive={!refreshing && !reduceMotion}
                     />
                   ),
                 )}
