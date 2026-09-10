@@ -3,6 +3,12 @@
   color-scheme: light;
   --bg: #eef0f4;
   --bg-elevated: #f6f7f9;
+  --header-bg: var(--bg);
+  --page-glow: radial-gradient(
+    900px 420px at 50% -180px,
+    color-mix(in srgb, var(--accent) 7%, transparent),
+    transparent 70%
+  );
   --card: #ffffff;
   --card-secondary: #f4f5f8;
   --glass: rgba(255, 255, 255, 0.72);
@@ -67,6 +73,12 @@
   color-scheme: dark;
   --bg: #0c0d10;
   --bg-elevated: #14151a;
+  --header-bg: var(--bg);
+  --page-glow: radial-gradient(
+    900px 420px at 50% -180px,
+    color-mix(in srgb, var(--accent) 7%, transparent),
+    transparent 70%
+  );
   --card: #16171c;
   --card-secondary: #1c1d24;
   --glass: rgba(28, 29, 36, 0.72);
@@ -131,13 +143,10 @@ body {
   margin: 0;
   font-family: var(--font);
   color: var(--text);
-  background:
-    radial-gradient(
-      900px 420px at 50% -180px,
-      color-mix(in srgb, var(--accent) 7%, transparent),
-      transparent 70%
-    ),
-    var(--bg);
+  background-color: var(--bg);
+  background-image: var(--page-glow);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
