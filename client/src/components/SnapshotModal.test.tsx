@@ -425,7 +425,7 @@ describe('snapshot workflow', () => {
       if (url.includes('/api/settings')) {
         return Promise.resolve(
           Response.json({
-            data: { currency: 'EUR', defaultRange: '3m' },
+            data: { currency: 'EUR', defaultRange: 'all' },
           }),
         );
       }

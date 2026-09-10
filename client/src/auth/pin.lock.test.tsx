@@ -2,6 +2,10 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../App';
+import {
+  dashboardRequestUrls,
+  expectSelectedDashboardRange,
+} from '../test/dashboard-range';
 import { mockApi } from '../test/mock-api';
 import { setViewportWidth } from '../test/viewport';
 
@@ -94,6 +98,29 @@ describe('PIN lock frontend', () => {
     await user.type(screen.getByLabelText('PIN'), '1234');
     await user.click(screen.getByRole('button', { name: 'Unlock' }));
     expect(await screen.findByRole('heading', { name: 'History' })).toBeInTheDocument();
+  });
+
+  it('opens the dashboard with All selected after PIN unlock', async () => {
+    mockApi({
+      authStatus: {
+        pinEnabled: true,
+        unlocked: false,
+        sessionExpiresAt: null,
+      },
+      configuredPin: '1234',
+    });
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Portfolio locked' });
+    expect(dashboardRequestUrls()).toEqual([]);
+
+    await user.type(screen.getByLabelText('PIN'), '1234');
+    await user.click(screen.getByRole('button', { name: 'Unlock' }));
+    expect(await screen.findByRole('heading', { name: 'History' })).toBeInTheDocument();
+
+    expectSelectedDashboardRange('All');
+    expect(dashboardRequestUrls()[0]).toContain('/api/dashboard?range=all');
   });
 
   it('submits the PIN with Enter', async () => {

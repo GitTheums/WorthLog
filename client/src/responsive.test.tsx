@@ -6,6 +6,10 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
 import { HistoryTable } from './components/HistoryTable';
+import {
+  dashboardRequestUrls,
+  expectSelectedDashboardRange,
+} from './test/dashboard-range';
 import { dashboardFixture } from './test/fixtures';
 import { mockApi } from './test/mock-api';
 import { renderWithProviders } from './test/render';
@@ -34,6 +38,16 @@ describe('responsive layout', () => {
     expect(
       screen.getByRole('button', { name: 'Open settings' }),
     ).toBeInTheDocument();
+  });
+
+  it('uses All as the initial dashboard range on mobile', async () => {
+    setViewportWidth(375);
+    mockApi();
+    render(<App />);
+    await screen.findByRole('heading', { name: 'History' });
+
+    expectSelectedDashboardRange('All');
+    expect(dashboardRequestUrls()[0]).toContain('/api/dashboard?range=all');
   });
 
   it('uses history cards at 375px', () => {

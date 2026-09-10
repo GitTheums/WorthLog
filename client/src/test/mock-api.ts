@@ -6,6 +6,7 @@ import type {
   Category,
   CreateCategoryPayload,
   DashboardData,
+  DashboardRange,
   SnapshotDetails,
   UpdateCategoryPayload,
   UpsertSnapshotPayload,
@@ -25,6 +26,18 @@ function requestUrl(input: RequestInfo | URL): string {
     return input.toString();
   }
   return input.url;
+}
+
+function dashboardRangeFromUrl(url: string): DashboardRange {
+  try {
+    const range = new URL(url, 'http://worthlog.test').searchParams.get('range');
+    if (range === '1m' || range === '3m' || range === '1y' || range === 'all') {
+      return range;
+    }
+  } catch {
+    // Ignore malformed URLs and fall back to the canonical startup range.
+  }
+  return 'all';
 }
 
 function readJsonBody(body: BodyInit | null | undefined): unknown {
@@ -73,7 +86,7 @@ export const backupFixture: BackupExport = {
     },
     {
       key: 'defaultRange',
-      value: '3m',
+      value: 'all',
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
     },
@@ -93,6 +106,7 @@ export const backupFixture: BackupExport = {
 
 interface MockApiOptions {
   dashboard?: DashboardData;
+  dashboardsByRange?: Partial<Record<DashboardRange, DashboardData>>;
   settings?: AppSettings;
   categories?: Category[];
   snapshotsByDate?: Record<string, SnapshotDetails>;
@@ -412,7 +426,12 @@ export function mockApi(options: MockApiOptions = {}) {
     }
 
     if (url.includes('/api/dashboard')) {
-      return Promise.resolve(Response.json({ data: dashboard }));
+      const requestedRange = dashboardRangeFromUrl(url);
+      const ranged = options.dashboardsByRange?.[requestedRange];
+      const payload: DashboardData = ranged
+        ? { ...ranged, range: requestedRange }
+        : { ...dashboard, range: requestedRange };
+      return Promise.resolve(Response.json({ data: payload }));
     }
 
     if (url.includes('/api/backup/export') && method === 'GET') {

@@ -6,6 +6,10 @@ import { HistoryTable } from '../components/HistoryTable';
 import { SummaryCards } from '../components/SummaryCards';
 import { TotalValueChart } from '../components/TotalValueChart';
 import { PRIVACY_STORAGE_KEY } from '../lib/privacy';
+import {
+  dashboardRequestUrls,
+  expectSelectedDashboardRange,
+} from '../test/dashboard-range';
 import { dashboardFixture } from '../test/fixtures';
 import { mockApi } from '../test/mock-api';
 import { renderWithProviders } from '../test/render';
@@ -204,5 +208,28 @@ describe('privacy mode', () => {
     );
 
     expect(fetchMock.mock.calls.length).toBe(callsBefore);
+  });
+
+  it('does not change the selected dashboard range', async () => {
+    mockApi();
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole('heading', { name: 'History' });
+
+    expectSelectedDashboardRange('All');
+    expect(dashboardRequestUrls()[0]).toContain('/api/dashboard?range=all');
+
+    await user.click(
+      screen.getByRole('button', { name: 'Hide monetary values' }),
+    );
+    expectSelectedDashboardRange('All');
+
+    await user.click(
+      screen.getByRole('button', { name: 'Show monetary values' }),
+    );
+    expectSelectedDashboardRange('All');
+    expect(
+      dashboardRequestUrls().every((url) => url.includes('range=all')),
+    ).toBe(true);
   });
 });

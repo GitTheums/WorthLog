@@ -45,7 +45,7 @@ The application runs locally, typically through Docker Compose, with all data ke
 | **Dashboard** | Total value history, category allocation, and per-category cards |
 | **Ranges** | Filter charts and history by 1M, 3M, 1Y, or All |
 | **Appearance** | Light and dark themes |
-| **Settings** | Display currency, default dashboard range, and optional PIN |
+| **Settings** | Display currency and optional PIN |
 | **Backup** | JSON export and import from the UI |
 | **Storage** | Local SQLite database; single Docker container with a healthcheck |
 | **Access** | No user accounts; optional portfolio PIN lock |

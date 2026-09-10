@@ -5,7 +5,7 @@ import type { AppSettings, DashboardRange, Setting } from '../types.js';
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   currency: 'EUR',
-  defaultRange: '3m',
+  defaultRange: 'all',
 };
 
 const DASHBOARD_RANGES = new Set<DashboardRange>(['1m', '3m', '1y', 'all']);

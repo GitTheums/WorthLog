@@ -19,7 +19,7 @@ describe('settings API', () => {
     expect(response.status).toBe(200);
     expect(response.body.data).toEqual({
       currency: 'EUR',
-      defaultRange: '3m',
+      defaultRange: 'all',
     });
   });
 

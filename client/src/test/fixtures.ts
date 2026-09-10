@@ -7,7 +7,7 @@ import type {
 
 export const settingsFixture: AppSettings = {
   currency: 'EUR',
-  defaultRange: '3m',
+  defaultRange: 'all',
 };
 
 export const categoriesFixture: Category[] = [
@@ -97,7 +97,7 @@ export const snapshotFixture: SnapshotDetails = {
 };
 
 export const emptyDashboardFixture: DashboardData = {
-  range: '3m',
+  range: 'all',
   hasSnapshots: false,
   currentTotalCents: 0,
   previousTotalCents: null,
@@ -116,7 +116,7 @@ export const emptyDashboardFixture: DashboardData = {
 };
 
 export const dashboardFixture: DashboardData = {
-  range: '3m',
+  range: 'all',
   hasSnapshots: true,
   currentTotalCents: 12_000,
   previousTotalCents: 8_000,
@@ -268,6 +268,38 @@ export const dashboardFixture: DashboardData = {
         { categoryId: 'cat-stocks', amountCents: 2_000 },
         { categoryId: 'cat-pokemon', amountCents: 2_000 },
         { categoryId: 'cat-skins', amountCents: 2_000 },
+      ],
+    },
+  ],
+};
+
+/** Portfolio that still has snapshots, but none inside a narrow selected range. */
+export const emptySelectedRangeDashboardFixture: DashboardData = {
+  ...emptyDashboardFixture,
+  range: '1m',
+  hasSnapshots: true,
+  firstTotalCents: 4_000,
+};
+
+/** Full history including a snapshot older than 1M / 3M / 1Y windows. */
+export const dashboardWithOldSnapshotFixture: DashboardData = {
+  ...dashboardFixture,
+  range: 'all',
+  timeSeries: [
+    { date: '2024-06-15', totalValueCents: 2_000 },
+    ...dashboardFixture.timeSeries,
+  ],
+  historyRows: [
+    ...dashboardFixture.historyRows,
+    {
+      date: '2024-06-15',
+      note: 'Older snapshot',
+      totalValueCents: 2_000,
+      values: [
+        { categoryId: 'cat-crypto', amountCents: 500 },
+        { categoryId: 'cat-stocks', amountCents: 500 },
+        { categoryId: 'cat-pokemon', amountCents: 500 },
+        { categoryId: 'cat-skins', amountCents: 500 },
       ],
     },
   ],

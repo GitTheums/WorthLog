@@ -93,4 +93,39 @@ describe('dashboard API', () => {
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
   });
+
+  it('GET /api/dashboard defaults to all history even when defaultRange is stored as 1m', async () => {
+    seedSnapshot(ctx.db, '2024-06-15', {
+      Crypto: 500,
+      Stocks: 500,
+      Pokémon: 500,
+      'CS2 Skins': 500,
+    });
+    seedSnapshot(ctx.db, '2026-03-01', {
+      Crypto: 3000,
+      Stocks: 3000,
+      Pokémon: 3000,
+      'CS2 Skins': 3000,
+    });
+
+    const stored = await request(ctx.app).patch('/api/settings').send({
+      defaultRange: '1m',
+    });
+    expect(stored.status).toBe(200);
+    expect(stored.body.data.defaultRange).toBe('1m');
+
+    const omitted = await request(ctx.app).get('/api/dashboard');
+    expect(omitted.status).toBe(200);
+    expect(omitted.body.data.range).toBe('all');
+    expect(omitted.body.data.timeSeries).toHaveLength(2);
+    expect(omitted.body.data.historyRows.map((row: { date: string }) => row.date)).toEqual([
+      '2026-03-01',
+      '2024-06-15',
+    ]);
+
+    const explicitAll = await request(ctx.app).get('/api/dashboard?range=all');
+    expect(explicitAll.status).toBe(200);
+    expect(explicitAll.body.data.range).toBe('all');
+    expect(explicitAll.body.data.historyRows).toHaveLength(2);
+  });
 });

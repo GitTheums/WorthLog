@@ -34,7 +34,6 @@ import type {
   BackupExport,
   Category,
   CategoryDeletionImpact,
-  DashboardRange,
 } from '../../api/types';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -77,13 +76,6 @@ const DEFAULT_DRAFT: CategoryDraft = {
   icon: 'Circle',
 };
 
-const RANGE_OPTIONS: Array<{ value: DashboardRange; label: string }> = [
-  { value: '1m', label: '1M' },
-  { value: '3m', label: '3M' },
-  { value: '1y', label: '1Y' },
-  { value: 'all', label: 'All' },
-];
-
 export function SettingsDialog({
   open,
   settings,
@@ -112,7 +104,6 @@ export function SettingsDialog({
   const [busyCategoryId, setBusyCategoryId] = useState<string | null>(null);
 
   const [currency, setCurrency] = useState(settings.currency);
-  const [defaultRange, setDefaultRange] = useState(settings.defaultRange);
   const [savingGeneral, setSavingGeneral] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [generalSuccess, setGeneralSuccess] = useState<string | null>(null);
@@ -181,7 +172,6 @@ export function SettingsDialog({
 
     if (open) {
       setCurrency(settings.currency);
-      setDefaultRange(settings.defaultRange);
     }
 
     wasOpenRef.current = open;
@@ -189,7 +179,6 @@ export function SettingsDialog({
     open,
     initialTab,
     settings.currency,
-    settings.defaultRange,
     loadCategories,
   ]);
 
@@ -402,10 +391,8 @@ export function SettingsDialog({
     try {
       const updated = await patchSettings({
         currency: normalized,
-        defaultRange,
       });
       setCurrency(updated.currency);
-      setDefaultRange(updated.defaultRange);
       setGeneralSuccess('General settings saved');
       onToast('success', 'General settings saved');
       onDataChanged();
@@ -919,22 +906,6 @@ export function SettingsDialog({
                     <p className="settings-hint">
                       Default is EUR. Use a 3-letter ISO currency code for display.
                     </p>
-                  </div>
-                  <div className="settings-field">
-                    <label htmlFor="settings-range">Default dashboard range</label>
-                    <select
-                      id="settings-range"
-                      value={defaultRange}
-                      onChange={(event) => {
-                        setDefaultRange(event.target.value as DashboardRange);
-                      }}
-                    >
-                      {RANGE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
                   </div>
                   {generalError ? (
                     <p className="settings-error" role="alert">

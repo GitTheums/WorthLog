@@ -1,5 +1,8 @@
 export type DashboardRange = '1m' | '3m' | '1y' | 'all';
 
+/** Canonical range used on every fresh dashboard load. Not persisted. */
+export const INITIAL_DASHBOARD_RANGE: DashboardRange = 'all';
+
 export interface AuthStatus {
   pinEnabled: boolean;
   unlocked: boolean;

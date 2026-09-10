@@ -310,16 +310,15 @@ describe('settings dialog', () => {
     const currency = within(dialog).getByLabelText('Currency');
     await user.clear(currency);
     await user.type(currency, 'USD');
-    await user.selectOptions(
-      within(dialog).getByLabelText('Default dashboard range'),
-      '1y',
-    );
+    expect(
+      within(dialog).queryByLabelText('Default dashboard range'),
+    ).not.toBeInTheDocument();
     await user.click(
       within(dialog).getByRole('button', { name: 'Save general settings' }),
     );
 
     await waitFor(() => {
-      expect(patches).toEqual([{ currency: 'USD', defaultRange: '1y' }]);
+      expect(patches).toEqual([{ currency: 'USD' }]);
     });
     expect(
       await within(dialog).findByText('General settings saved'),

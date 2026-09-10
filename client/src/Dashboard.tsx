@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ApiError, deleteSnapshot, fetchCategories } from './api/client';
-import type { DashboardRange } from './api/types';
+import { INITIAL_DASHBOARD_RANGE, type DashboardRange } from './api/types';
 import { AllocationChart } from './components/AllocationChart';
 import { CategoryCards } from './components/CategoryCards';
 import { ConfirmDialog } from './components/ConfirmDialog';
@@ -46,7 +46,7 @@ export function Dashboard() {
     error: settingsError,
     reload: reloadSettings,
   } = useSettings();
-  const [range, setRange] = useState<DashboardRange | null>(null);
+  const [range, setRange] = useState<DashboardRange>(INITIAL_DASHBOARD_RANGE);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('categories');
   const [snapshotOpen, setSnapshotOpen] = useState(false);
@@ -87,12 +87,6 @@ export function Dashboard() {
       setLocking(false);
     }
   };
-
-  useEffect(() => {
-    if (settings && range === null) {
-      setRange(settings.defaultRange);
-    }
-  }, [settings, range]);
 
   const {
     data,
@@ -197,7 +191,7 @@ export function Dashboard() {
 
   let mainContent: ReactNode;
 
-  if (settingsLoading || range === null || (dashboardLoading && !data)) {
+  if (settingsLoading || (dashboardLoading && !data)) {
     mainContent = <DashboardSkeleton />;
   } else if (fatalError) {
     mainContent = (
