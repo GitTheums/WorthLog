@@ -24,12 +24,10 @@ function AllocationTooltip({
   active,
   payload,
   currency,
-  privacyHidden,
 }: {
   active?: boolean;
   payload?: TooltipPayloadItem[];
   currency: string;
-  privacyHidden: boolean;
 }) {
   const item = payload?.[0];
   if (!active || !item?.name || item.value === undefined || !item.payload) {
@@ -40,11 +38,7 @@ function AllocationTooltip({
     <div className="chart-tooltip">
       <p className="chart-tooltip__date">{item.name}</p>
       <p className="chart-tooltip__value">
-        {privacyHidden ? (
-          'Value hidden'
-        ) : (
-          formatMoney(item.value, currency)
-        )}
+        <PrivacyValue>{formatMoney(item.value, currency)}</PrivacyValue>
         <span className="allocation-tooltip__percent">
           {formatSharePercent(item.payload.percent)}
         </span>
@@ -95,12 +89,7 @@ export function AllocationChart({ data, currency }: AllocationChartProps) {
                 />
                 <Tooltip
                   allowEscapeViewBox={{ x: true, y: true }}
-                  content={
-                    <AllocationTooltip
-                      currency={currency}
-                      privacyHidden={privacyHidden}
-                    />
-                  }
+                  content={<AllocationTooltip currency={currency} />}
                 />
                 <text
                   x="50%"
@@ -114,7 +103,11 @@ export function AllocationChart({ data, currency }: AllocationChartProps) {
                   x="50%"
                   y="56%"
                   textAnchor="middle"
-                  className="allocation-chart__center-value"
+                  className={
+                    privacyHidden
+                      ? 'allocation-chart__center-value allocation-chart__center-value--hidden'
+                      : 'allocation-chart__center-value'
+                  }
                 >
                   {privacyHidden
                     ? '••••••'

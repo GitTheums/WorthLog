@@ -3,7 +3,7 @@ import { usePrivacyModeContext } from '../privacy/usePrivacyModeContext';
 import './PrivacyValue.css';
 
 interface PrivacyValueProps {
-  children: ReactNode;
+  children?: ReactNode;
   /** Optional class for the outer wrapper. */
   className?: string;
 }

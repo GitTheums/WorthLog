@@ -19,6 +19,7 @@ import {
   formatSnapshotDate,
 } from '../lib/format';
 import { usePrivacyModeContext } from '../privacy/usePrivacyModeContext';
+import { PrivacyValue } from './PrivacyValue';
 import { RangeControls } from './RangeControls';
 import './TotalValueChart.css';
 
@@ -67,7 +68,9 @@ function ChartTooltip({
     <div className="chart-tooltip">
       <p className="chart-tooltip__date">{formatSnapshotDate(date)}</p>
       {privacyHidden ? (
-        <p className="chart-tooltip__value">Value hidden</p>
+        <p className="chart-tooltip__value">
+          <PrivacyValue />
+        </p>
       ) : (
         <ul className="chart-tooltip__list">
           {payload.map((item) => {

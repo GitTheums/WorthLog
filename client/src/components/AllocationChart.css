@@ -80,6 +80,11 @@
   letter-spacing: -0.03em;
 }
 
+.allocation-chart__center-value--hidden {
+  fill: var(--text-secondary);
+  letter-spacing: 0.14em;
+}
+
 .allocation-chart__legend {
   list-style: none;
   margin: 0;

@@ -5,23 +5,15 @@
 }
 
 .privacy-value--hidden {
-  position: relative;
   user-select: none;
   -webkit-user-select: none;
   cursor: default;
 }
 
 .privacy-value__mask {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 5.4ch;
-  padding: 0.08em 0.42em 0.14em;
-  letter-spacing: 0.2em;
-  border-radius: 7px;
-  background: var(--fill-secondary);
-  color: var(--text-tertiary);
-  line-height: 1;
-  filter: blur(0.45px);
-  opacity: 0.92;
+  display: inline-block;
+  min-width: 4.5ch;
+  letter-spacing: 0.14em;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
